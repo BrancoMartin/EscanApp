@@ -38,7 +38,8 @@ class SaleService:
             self.repo.add_item_to_sale(item)
             total += qty * up
         sale.total_price = total
-        self.repo.update_total(sale)
+        self.repo.db.commit()      # commit primero
+        self.repo.db.refresh(sale) # refresh después
         return self._format_sale(sale)
 
     def close_sale(self, sale_id: int):
