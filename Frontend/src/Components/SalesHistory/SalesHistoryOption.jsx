@@ -11,7 +11,8 @@ function SalesHistoryOption() {
   useEffect(() => {
     const fetchHistory = async () => {
       try {
-        const response = await axios.get("/api/sales/");
+        const response = await axios.get("http://localhost:8000/api/sales/");
+        console.log("HISTORIAL DE VENTAS: ", response.data);
         setHistory(response.data);
       } catch {
         setError("No se pudo cargar el historial de ventas");

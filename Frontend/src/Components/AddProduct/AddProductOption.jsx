@@ -41,12 +41,15 @@ function AddProductOption() {
     if (errors.length === undefined) {
       console.log("ENTRANDO A MANDAR LOS PRODUCTOS");
       try {
-        const response = await axios.post("/api/products/", {
-          barcode,
-          name,
-          price,
-          description,
-        });
+        const response = await axios.post(
+          "http://localhost:8000/api/products/",
+          {
+            barcode,
+            name,
+            price,
+            description,
+          },
+        );
         console.log("RESPUESTA", response.data);
         setMessage(`Producto creado: ${response.data.name}`);
         setBarcode("");

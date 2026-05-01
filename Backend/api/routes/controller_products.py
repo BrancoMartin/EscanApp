@@ -23,10 +23,9 @@ def get_by_barcode(
     barcode: str,
     sale_service: SaleService = Depends(get_sale_service)
 ):
-    try:
-        result = sale_service.scan_product_by_barcode(barcode)
-    except ValueError as exc:
-        raise HTTPException(status_code=404, detail=str(exc))
+    result = sale_service.scan_product_by_barcode(barcode)
+    if "error" in result:
+        raise HTTPException(status_code=404, detail=result["error"])
     return result
 
 # Create product

@@ -18,7 +18,16 @@ class SaleInput(BaseModel):
 # List sale history
 @router.get("/")
 def get_all(service: SaleService = Depends(get_sale_service)):
-    return service.get_history()
+    sales = service.get_history()
+    
+    print("Ventas obtenidas del servicio:", sales)  # Agrega este print para verificar los datos
+    
+    return sales
+
+# Get pending sale
+@router.get("/pending")
+def get_pending(service: SaleService = Depends(get_sale_service)):
+    return service.get_pending()
 
 # Create a sale from item list
 @router.post("/")

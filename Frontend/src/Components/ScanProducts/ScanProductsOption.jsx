@@ -11,17 +11,36 @@ function ScanProductsOption() {
   const [message, setMessage] = useState("");
   const [messageCancel, setMessageCancel] = useState("");
 
+  useEffect(() => {
+    const loadPending = async () => {
+      try {
+        const response = await axios.get(
+          "http://localhost:8000/api/sales/pending",
+        );
+        if (response.data) setSale(response.data);
+      } catch (err) {
+        console.log("No pending sale");
+      }
+    };
+    loadPending();
+  }, []);
+
   const handleScan = async (event) => {
-    event.preventDefault();
+    console.log("HANDLE SCAN EJECUTANDOSE: event: ", event);
     setError("");
     setSale(null);
     setLoading(true);
 
+    console.log("HANDLE SCAN EJECUTANDOSE: barcode: ", barcode);
+
     try {
       const response = await axios.get(
-        `/api/products/barcode/${encodeURIComponent(barcode)}`, // el encodeURIComponent codifica los caracteres especiales para transformarlos y que puedan estar en la url
+        `http://localhost:8000/api/products/barcode/${encodeURIComponent(barcode)}`,
       );
-      setSale(response.data);
+
+      console.log("RESPUESTA ESCANEAR PRODUCTO", response.data);
+
+      setSale(response.data.sale);
     } catch (err) {
       setError(err.response?.data?.detail || "No se pudo escanear el producto");
     } finally {
@@ -31,9 +50,12 @@ function ScanProductsOption() {
 
   const HandleCloseSale = async () => {
     try {
-      const response = await axios.post(`/api/sales/${sale.id}/close`);
+      const response = await axios.post(
+        `http://localhost:8000/api/sales/${sale.id}/close`,
+      );
       console.log("RESPUESTA CERRAR VENTA", response.data);
       setMessage(response.data);
+      setSale(null); // Clear the sale after closing
     } catch (err) {
       setMessage(err.response?.data?.detail || "No se pudo cerrar la venta");
     }
@@ -41,7 +63,9 @@ function ScanProductsOption() {
 
   const getSaleDetails = async (saleId) => {
     try {
-      const response = await axios.get(`/api/sales/${saleId}`);
+      const response = await axios.get(
+        `http://localhost:8000/api/sales/${saleId}`,
+      );
       setSale(response.data);
     } catch (err) {
       setError(err.response?.data?.detail || "No se pudo cargar la venta");
@@ -53,7 +77,9 @@ function ScanProductsOption() {
       `Intentando cancelar item con ID: ${itemId} de la venta ID: ${sale.id}`,
     );
     try {
-      const response = await axios.put(`/api/sales/${sale.id}/items/${itemId}`);
+      const response = await axios.put(
+        `http://localhost:8000/api/sales/${sale.id}/items/${itemId}`,
+      );
       getSaleDetails(sale.id); // Actualiza los detalles de la venta después de cancelar el producto
       console.log("RESPUESTA CANCELAR PRODUCTO", response.data.message);
       setMessageCancel(response.data.message);
@@ -68,7 +94,7 @@ function ScanProductsOption() {
     <section className="option-panel">
       <Nav />
 
-      <form onSubmit={HandleCloseSale} className="option-form">
+      <form className="option-form">
         <div className="box-title">
           <h2 className="title">Escanear productos</h2>
           <p className="description">
@@ -84,39 +110,44 @@ function ScanProductsOption() {
             value={barcode}
             onChange={(e) => setBarcode(e.target.value)}
             placeholder="Ej. 1234567890123"
-            onKeyDown={(e) => e.key === "Enter" && handleScan(e)} // aca tengo que poner un evento que me traiga a ese product y que me agregue al tocket el producto escaneado
+            onKeyDown={(e) => e.key === "Enter" && handleScan(e)}
           />
         </label>
         <button
           className="button"
-          type="submit"
+          type="button"
+          onClick={handleScan}
           disabled={loading || !barcode.trim()}
         >
-          {loading ? "Creando venta..." : "Crear venta"}
+          {loading ? "Escaneando..." : "Escanear producto"}
         </button>
       </form>
-      {error && <p className="error-message">{error}</p>}
       {sale && (
-        <div className="sale-preview">
-          <h3>Venta pendiente</h3>
-          <p>Estado: {sale.state}</p>
-          <p>Total: {sale.total}</p>
-          <p>Items: {sale.items_count}</p>
-          <div className="sale-items">
-            {sale.items?.map((item) => (
-              <div key={item.id} className="sale-item">
-                <strong>{item.product}</strong>
-                <span>Cantidad: {item.quantity}</span>
-                <span>Precio unitario: {item.unit_price}</span>
-                <span>Subtotal: {item.subtotal}</span>
-                <button onClick={() => handleCancelProduct(item.id)}>
-                  Cancelar producto
-                </button>
-              </div>
-            ))}
+        <>
+          <div className="sale-preview">
+            <h3>Venta pendiente</h3>
+            <p>Estado: {sale.state}</p>
+            <p>Total: ${sale.total_price}</p>
+            <div className="sale-items">
+              {sale.items?.map((item) => (
+                <div key={item.id} className="sale-item">
+                  <strong>{item.product_name}</strong>
+                  <span>Cantidad: {item.quantity}</span>
+                  <span>Precio unitario: ${item.unit_price}</span>
+                  <span>Subtotal: ${item.subtotal}</span>
+                  <button onClick={() => handleCancelProduct(item.id)}>
+                    Cancelar producto
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+          <button className="button" onClick={HandleCloseSale}>
+            Cerrar venta
+          </button>
+        </>
       )}
+      {error && <p className="error-message">{error}</p>}
       {message && <p className="success-message">{message}</p>}
       {messageCancel && <p className="success-message">{messageCancel}</p>}
     </section>
