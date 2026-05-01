@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import axios from "axios";
 import Nav from "../Nav/nav";
 import "./ScanProductsOption.css";
@@ -19,7 +19,7 @@ function ScanProductsOption() {
         );
         if (response.data) setSale(response.data);
       } catch (err) {
-        console.log("No pending sale");
+        console.error("Error al cargar venta pendiente:", err);
       }
     };
     loadPending();

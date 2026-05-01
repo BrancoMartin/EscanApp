@@ -12,6 +12,9 @@ class SaleService:
         self.repo = SaleRepository(db)
         
 
+    def get_all(self):
+        return [self._format_sale(s) for s in self.repo.get_all()]
+
     def get_pending(self):
         sale = self.repo.get_pending_sale()
         if not sale:
@@ -97,6 +100,10 @@ class SaleService:
         self.repo.update_total(pending_sale)
         
         return {"success": True, "sale": self._format_sale(pending_sale)}
+
+
+    def get_items(self, sale_id: int):
+        return self.repo.get_items(sale_id)
 
     def _format_sale(self, sale: Sale):
         items = []

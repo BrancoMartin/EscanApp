@@ -54,3 +54,7 @@ class SaleRepository(RepositoryBase[Sale]):
     def get_item_by_id(self, item_id: int) -> SaleItem:
         """Gets a sale item by its ID"""
         return self.db.query(SaleItem).filter(SaleItem.id == item_id).first()
+
+    def get_items(self, sale_id: int) -> list[SaleItem]:
+        """Gets all items for a given sale"""
+        return self.db.query(SaleItem).filter(SaleItem.sale_id == sale_id).all()
