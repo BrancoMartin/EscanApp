@@ -57,12 +57,28 @@ class SaleService:
         return self._format_sale(sale)
 
     def remove_item_from_sale(self, sale_id: int, item_id: int):
-        deleted = self.repo.delete_item(sale_id, item_id)
-        if not deleted:
+        print(f"SERVICE: Intentando eliminar item con ID {item_id} de la venta con ID {sale_id}")
+
+        item = self.repo.get_item_by_id_and_sale(sale_id, item_id)
+        if not item:
             return {"error": "Item not found"}
+        print("ITEM ENCONTRADO:", item)
+       
         sale = self.repo.get_by_id(sale_id)
-        items = self.repo.get_items(sale_id)
-        sale.total_price = sum(i.quantity * i.unit_price for i in items)
+        print("SALE ENCONTRADA:", sale)
+        sale.total_price = sale.total_price - item.unit_price
+        if sale.total_price < 0:
+            sale.total_price = 0.0
+        item.quantity = item.quantity - 1
+        if item.quantity <= 0:
+            response = self.repo.remove_item_from_sale(item)
+            if not response:
+                return {"error": "Failed to remove item from sale"}
+        if len(sale.items) == 0:
+            self.repo.db.delete(sale)
+            self.repo.db.commit()
+
+        print("SALE ANTES DE ACTUALIZAR:", sale)
         self.repo.update_total(sale)
         return self._format_sale(sale)
 
@@ -125,3 +141,6 @@ class SaleService:
             "created_at": str(sale.created_at),
             "items": items,
         }
+
+    def get_item_by_id_and_sale(self, sale_id: int, item_id: int):
+        return self.repo.get_item_by_id_and_sale(sale_id, item_id)

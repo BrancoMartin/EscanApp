@@ -51,7 +51,7 @@ function AddProductOption() {
           },
         );
         console.log("RESPUESTA", response.data);
-        setMessage(`Producto creado: ${response.data.name}`);
+        setMessage(`Producto creado: ${response.data.product.name}`);
         setBarcode("");
         setName("");
         setPrice("");

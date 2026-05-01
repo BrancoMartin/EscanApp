@@ -58,3 +58,18 @@ class SaleRepository(RepositoryBase[Sale]):
     def get_items(self, sale_id: int) -> list[SaleItem]:
         """Gets all items for a given sale"""
         return self.db.query(SaleItem).filter(SaleItem.sale_id == sale_id).all()
+    
+    def get_item_by_id_and_sale(self, sale_id: int, item_id: int) -> SaleItem:
+        """Gets a specific item from a sale by its ID"""
+        return self.db.query(SaleItem).filter(
+            SaleItem.sale_id == sale_id,
+            SaleItem.id == item_id
+        ).first()
+    
+    def remove_item_from_sale(self, item: SaleItem) -> bool:
+        """Removes an item from a sale"""
+        if item:
+            self.db.delete(item)
+            self.db.commit()
+            return True
+        return False
