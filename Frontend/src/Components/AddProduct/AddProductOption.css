@@ -1,0 +1,59 @@
+.container-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.label-add-product {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--primary);
+  margin-top: 0.2rem;
+}
+
+.label-add-product input,
+.label-add-product textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(94, 36, 210, 0.15);
+  background: #faf8ff;
+  color: var(--text);
+  font-size: 1rem;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.label-add-product input:focus,
+.label-add-product textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px rgba(123, 70, 255, 0.1);
+}
+
+.label-add-product textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+.form-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+  gap: 0.5rem;
+  margin: 0.5rem;
+}
+
+.button {
+  width: fit-content;
+  margin-top: 0.25rem;
+}
+
+@media (max-width: 720px) {
+  .form-fields {
+    grid-template-columns: 1fr;
+  }
+}

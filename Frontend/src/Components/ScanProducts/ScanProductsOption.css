@@ -1,0 +1,93 @@
+.option-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  font-size: 0.95rem;
+  color: var(--text-muted);
+}
+
+.option-form input {
+  width: 100%;
+  padding: 15px 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(94, 36, 210, 0.15);
+  background: #faf8ff;
+  color: var(--text);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.option-form input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px rgba(123, 70, 255, 0.1);
+}
+
+.sale-preview {
+  width: min(1100px, 100%);
+  margin: 0 auto;
+  padding: 1.6rem;
+  background: var(--surface-strong);
+  border-radius: 24px;
+  border: 1px solid rgba(123, 70, 255, 0.08);
+  box-shadow: var(--shadow-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.sale-preview h3 {
+  margin: 0;
+  font-size: 1.45rem;
+  color: var(--primary-dark);
+}
+
+.sale-items {
+  display: grid;
+  gap: 1rem;
+}
+
+.sale-item {
+  padding: 1.1rem 1.2rem;
+  background: #faf8ff;
+  border-radius: 20px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 1rem;
+  align-items: center;
+  box-shadow: 0 10px 24px rgba(80, 55, 140, 0.08);
+}
+
+.sale-item strong {
+  font-size: 1rem;
+  color: var(--text);
+}
+
+.sale-item span {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+.sale-item button {
+  padding: 0.75rem 1rem;
+  border-radius: 999px;
+  border: 1px solid rgba(220, 47, 55, 0.18);
+  background: rgba(220, 47, 55, 0.1);
+  color: var(--danger);
+  font-weight: 700;
+  transition:
+    transform 0.2s ease,
+    background 0.2s ease;
+}
+
+.sale-item button:hover {
+  background: rgba(220, 47, 55, 0.16);
+  transform: translateY(-1px);
+}
+
+@media (max-width: 720px) {
+  .sale-item {
+    grid-template-columns: 1fr;
+  }
+}

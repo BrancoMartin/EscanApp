@@ -1,7 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import "./start.css";
-import AgentChat from "../Components/AgentChat/AgentChat";
 
 function Start() {
   const [showAgent, setShowAgent] = useState(false);
@@ -24,22 +23,6 @@ function Start() {
           <p className="button-start">Escanear Productos</p>
         </button>
       </div>
-
-      <div className="agent-button-container">
-        <button
-          className="agent-button"
-          onClick={() => setShowAgent(!showAgent)}
-          title="¿Querés configurar el aumento de precios? Hablá con nuestro agente."
-        >
-          <span className="agent-icon">🤖</span>
-        </button>
-        <div className="agent-tooltip">
-          AJUSTA LOS PRECIOS DE TUS PRODUCTOS. Hablando con este agente ia
-        </div>
-      </div>
-
-      {/* Panel lateral del chat */}
-      {showAgent && <AgentChat onClose={() => setShowAgent(false)} />}
     </div>
   );
 }

@@ -3,7 +3,6 @@ from pydantic import BaseModel
 from services.product_service import ProductService
 from services.sale_service import SaleService
 from dependencies import get_product_service, get_sale_service
-from services.ai_price_service import AIPriceService
 from sqlalchemy.orm import Session
 router = APIRouter()
 
