@@ -1,3 +1,5 @@
+import sys
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles  # para servir archivos estáticos (css, js)
@@ -29,12 +31,14 @@ def create_app() -> FastAPI:  # -> FastAPI indica que esta función devuelve una
     @app.get("/health")
     def health():
         return {"status": "ok"}
+    
+    def get_base_path():
+        if getattr(sys, 'frozen', False):
+            return sys._MEIPASS  # ruta temporal cuando corre como .exe
+        return os.path.join(os.path.dirname(__file__), '..', '..')
 
-    # Construimos la ruta absoluta a la carpeta dist de React
-    # __file__ es la ruta de este archivo (app.py)
-    # .. sube un nivel, ../.. sube dos niveles hasta llegar a la raíz
-    # ✅ Imprime la ruta para ver dónde está buscando
-    frontend_dist = os.path.join(os.path.dirname(__file__), "..", "..", "Frontend", "dist")
+   
+    frontend_dist = os.path.join(get_base_path(), "Frontend", "dist")
     print("Buscando frontend en:", os.path.abspath(frontend_dist))
     print("Existe:", os.path.exists(frontend_dist))
     

@@ -1,13 +1,22 @@
+import sys
+
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import os
 
 
+
+def get_db_path():
+    if getattr(sys, 'frozen', False):
+        # Guarda la DB al lado del .exe, no en la carpeta temporal
+        return os.path.dirname(sys.executable)
+    return os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
+
 # from models import attribute
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATABASE_URL = f"sqlite:///{os.path.join(BASE_DIR, '..', 'pos.db')}"
+BASE_DIR = get_db_path()
+DATABASE_URL = f"sqlite:///{os.path.join(BASE_DIR, 'pos.db')}"
 
 # Motor de la base de datos
 engine = create_engine(
