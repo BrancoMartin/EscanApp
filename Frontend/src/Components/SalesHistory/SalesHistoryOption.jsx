@@ -28,7 +28,7 @@ function SalesHistoryOption() {
 
       const fechaHoy = new Date();
 
-      response.data.map((sale) => {
+      const ventasRecientes = response.data.filter((sale) => {
         console.log("Fecha hoy: ", fechaHoy);
 
         const fechaVenta = parsearFecha(sale.created_at);
@@ -42,12 +42,11 @@ function SalesHistoryOption() {
 
         console.log("HORAS DE DIFERENCIA: ", diferenciaHoras);
 
-        if (diferenciaHoras <= 24) {
-          console.log("VENTA RECIENTE: ", sale);
-          setBuys((prevBuys) => [...prevBuys, sale]);
-          setLoading(false);
-        }
+        return diferenciaHoras <= 24;
       });
+
+      setBuys(ventasRecientes);
+      setLoading(false);
 
       setHistory(response.data);
     };
