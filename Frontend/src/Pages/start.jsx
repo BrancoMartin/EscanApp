@@ -9,7 +9,7 @@ function Start() {
   return (
     <div className="start-page">
       <header className="start-header">
-        <h1>Sistema de Administración</h1>
+        <h1>EscanApp</h1>
       </header>
 
       <div className="start-actions">

@@ -42,7 +42,7 @@ exe = EXE(
     a.binaries,
     a.zipfiles,
     a.datas,
-    name='POS',
+    name='EscanApp',
     debug=False,
     strip=False,
     upx=True,
