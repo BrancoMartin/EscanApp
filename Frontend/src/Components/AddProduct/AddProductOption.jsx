@@ -13,7 +13,7 @@ function AddProductOption() {
   const [description, setDescription] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [errors, setErrors] = useState("");
+  const [errors, setErrors] = useState({});
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -38,9 +38,9 @@ function AddProductOption() {
 
     console.log("ERRORES EN EL HANDLE SUBMIT", errors);
 
-    console.log("LONGITUD DE LOS ERRORES", errors.length);
+    console.log("LONGITUD DE LOS ERRORES", Object.keys(errors).length);
 
-    if (errors.length === undefined) {
+    if (Object.keys(errors).length === 0) {
       console.log("ENTRANDO A MANDAR LOS PRODUCTOS");
       try {
         const response = await axios.post(`${BASE_URL}/api/products/`, {
