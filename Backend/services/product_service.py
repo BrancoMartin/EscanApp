@@ -31,13 +31,13 @@ class ProductService:
 
     def create(self, barcode: str, name: str, price: float, description: str = None) -> Product:
         if not barcode or barcode.strip() == "":
-            raise ValueError("Product barcode is required")
+            raise ValueError("El codigo de barras es obligatorio")
         if not name or name.strip() == "":
-            raise ValueError("Product name is required")
+            raise ValueError("El nombre del producto es obligatorio")
         if price is None or price <= 0:
-            raise ValueError("Product price must be greater than zero")
+            raise ValueError("El precio del producto debe ser mayor que cero")
         if self.repo.get_by_barcode(barcode):
-            raise ValueError("Product with that barcode already exists")
+            raise ValueError("Ya existe un producto con ese codigo de barras")
        
 
         product = Product(name=name, description=description, price=price, barcode=barcode)

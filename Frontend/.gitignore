@@ -23,3 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 requerimientos.txt
+
+dist/
+build/
+*.zip
+dist.zip

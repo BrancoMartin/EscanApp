@@ -4,3 +4,16 @@ __pycache__/
 *.pyo
 .env
 requerimientos.txt
+
+dist/
+build/
+*.zip
+dist.zip
+
+.venv/
+venv38/
+dist/
+build/
+*.db
+*.zip
+*.exe
