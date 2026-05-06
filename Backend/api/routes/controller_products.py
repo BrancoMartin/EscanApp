@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from services.product_service import ProductService
 from services.sale_service import SaleService
 from dependencies import get_product_service, get_sale_service
+from typing import Optional
 from sqlalchemy.orm import Session
 router = APIRouter()
 
@@ -10,7 +11,7 @@ class ProductInput(BaseModel):
     barcode: str
     name: str
     price: float
-    description: str | None = None
+    description: Optional[str] = None
 
 # List all products
 @router.get("/")

@@ -5,6 +5,7 @@ from models.item_sale import SaleItem
 from models.product import Product
 from datetime import datetime
 from repositories.repository_base import RepositoryBase
+from typing import List
 
 
 class SaleRepository(RepositoryBase[Sale]):
@@ -55,7 +56,7 @@ class SaleRepository(RepositoryBase[Sale]):
         """Gets a sale item by its ID"""
         return self.db.query(SaleItem).filter(SaleItem.id == item_id).first()
 
-    def get_items(self, sale_id: int) -> list[SaleItem]:
+    def get_items(self, sale_id: int) -> List[SaleItem]:
         """Gets all items for a given sale"""
         return self.db.query(SaleItem).filter(SaleItem.sale_id == sale_id).all()
     

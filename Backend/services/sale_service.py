@@ -8,6 +8,7 @@ from models.product import Product
 from datetime import datetime
 
 
+
 class SaleService:
 
     def __init__(self, db: Session):

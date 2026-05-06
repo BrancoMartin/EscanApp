@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from repositories.product_repository import ProductRepository
 from models.product import Product
+from typing import List
 
 
 class ProductService:
@@ -11,7 +12,7 @@ class ProductService:
         self.repo = ProductRepository(db)
   
     
-    def get_all(self) -> list[Product]:
+    def get_all(self) -> List[Product]:
         return self.repo.get_all()
     
     def get_by_barcode(self, barcode: str) -> Product:

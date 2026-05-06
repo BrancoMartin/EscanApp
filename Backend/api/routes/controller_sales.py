@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from services.sale_service import SaleService
 from dependencies import get_sale_service
 from sqlalchemy.orm import Session
+from typing import List
 
 router = APIRouter()
 
@@ -12,7 +13,7 @@ class SaleItemInput(BaseModel):
     unit_price: float
 
 class SaleInput(BaseModel):
-    items: list[SaleItemInput]
+    items: List[SaleItemInput]
     
 # Get pending sale
 @router.get("/pending")
