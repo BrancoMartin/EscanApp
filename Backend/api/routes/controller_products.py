@@ -25,8 +25,9 @@ def get_by_barcode(
     sale_service: SaleService = Depends(get_sale_service)
 ):
     result = sale_service.scan_product_by_barcode(barcode)
-    if "error" in result:
-        raise HTTPException(status_code=404, detail=result["error"])
+    if result is None:
+        print("ERROR ESCANEANDO PRODUCTO: Producto no encontrado")
+        raise HTTPException(status_code=404, detail="Producto no encontrado")
     return result
 
 # Create product

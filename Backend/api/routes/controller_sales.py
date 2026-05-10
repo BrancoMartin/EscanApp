@@ -42,8 +42,8 @@ def close_sale(sale_id: int, service: SaleService = Depends(get_sale_service)):
     print(f"Intentando cerrar venta con ID: {sale_id}")
     result = service.close_sale(sale_id)
     print("Resultado de cerrar venta:", result)
-    if "error" in result:
-        raise HTTPException(status_code=404, detail=result["error"])
+    if not result:
+        raise HTTPException(status_code=404, detail="No se pudo cerrar la venta")
     return result
 
 # Get sale details
@@ -58,16 +58,16 @@ def get_sale(sale_id: int, service: SaleService = Depends(get_sale_service)):
 def handle_cancel_item_product(sale_id: int, item_id: int, service: SaleService = Depends(get_sale_service)):
     print(f"Intentando cancelar item con ID {item_id} de la venta con ID {sale_id}")
     result = service.remove_item_from_sale(sale_id, item_id)
-    if "error" in result:
-        raise HTTPException(status_code=404, detail=result["error"])
+    if not result:
+        raise HTTPException(status_code=404, detail="No se pudo cancelar el producto")
     return result
 
 @router.delete("/{sale_id}")
 def delete_sale(sale_id: int, service: SaleService = Depends(get_sale_service)):
     print(f"Intentando eliminar venta con ID: {sale_id}")
     result = service.delete_sale(sale_id)
-    if "error" in result:
-        raise HTTPException(status_code=404, detail=result["error"])
+    if not result:
+        raise HTTPException(status_code=404, detail="No se pudo eliminar la venta")
     return result
 
 

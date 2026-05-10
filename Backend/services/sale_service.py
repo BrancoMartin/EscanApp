@@ -99,8 +99,28 @@ class SaleService:
             self.repo.add_item_to_sale(item)
         items = self.repo.get_items(pending_sale.id)
         pending_sale.total_price = sum(i.quantity * i.unit_price for i in items)
-        self.repo.update_total(pending_sale)
-        return product
+        sale = self.repo.update_total(pending_sale)
+
+        format_items = []
+        for i in items:
+            format_items.append({
+                "id": i.id,
+                "product_id": i.product_id,
+                "quantity": i.quantity,
+                "unit_price": i.unit_price,
+                "subtotal": i.quantity * i.unit_price
+            })
+
+        format_sale = {
+            "sale": {
+                "id": sale.id,
+                "state": sale.state,
+                "total_price": sale.total_price,
+                "created_at": sale.created_at.strftime("%d/%m/%Y"),
+            },
+            "items": format_items
+        }
+        return format_sale
 
     def get_items(self, sale_id: int):
         return self.repo.get_items(sale_id)

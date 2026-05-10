@@ -31,7 +31,9 @@ function Modal({ loading, error, buys }) {
           <tbody>
             {buys.length == 0 && (
               <tr>
-                <td colSpan="5">No hay ventas registradas aún.</td>
+                <td className="no-data" colSpan="5">
+                  No hay ventas registradas aún.
+                </td>
               </tr>
             )}
             {buys.length != 0 &&
