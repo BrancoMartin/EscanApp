@@ -42,7 +42,7 @@ function ScanProductsOption() {
 
       setSale(response.data);
 
-      console.log("TOTAL PRICE", sale.sale.total_price);
+      console.log("TOTAL PRICE", sale.total_price);
     } catch (err) {
       setError(err.response?.data?.detail || "No se pudo escanear el producto");
     } finally {
@@ -74,11 +74,9 @@ function ScanProductsOption() {
   };
 
   const handleCancelSale = async () => {
-    console.log("CANCELANDO VENTA COMPLETA: ", sale.sale.id);
+    console.log("CANCELANDO VENTA COMPLETA: ", sale.id);
 
-    const response = await axios.delete(
-      `${BASE_URL}/api/sales/${sale.sale.id}`,
-    );
+    const response = await axios.delete(`${BASE_URL}/api/sales/${sale.id}`);
     setSale(false);
     setBarcode("");
 
@@ -86,18 +84,18 @@ function ScanProductsOption() {
   };
 
   const handleCancelProduct = async (item) => {
-    console.log("ID DEL ITEM SALE", item.id);
-    console.log("SALE ID", sale.sale.id);
+    console.log("ID DEL ITEM SALE", item.);
+    console.log("SALE ID", sale.id);
     console.log("SALE", sale);
     if (sale.items.length === 1 && sale.items[0].quantity === 1) {
       handleCancelSale();
     } else {
-      console.log("CANCELANDO ITEM VENTA: ", item.id);
+      console.log("CANCELANDO ITEM VENTA: ", item.product_id);
       try {
         const response = await axios.put(
-          `${BASE_URL}/api/sales/${sale.sale.id}/items/${item.id}`,
+          `${BASE_URL}/api/sales/${sale.id}/items/${item.product_id}`,
         );
-        getSaleDetails(sale.sale.id); // Actualiza los detalles de la venta después de cancelar el producto
+        getSaleDetails(sale.id); // Actualiza los detalles de la venta después de cancelar el producto
         console.log("RESPUESTA CANCELAR PRODUCTO", response.data.message);
         setMessageCancel(response.data.message);
       } catch (err) {
@@ -144,7 +142,7 @@ function ScanProductsOption() {
         <>
           <div className="sale-preview">
             <h2>TICKET</h2>
-            <h4>Total: ${}</h4>
+            <h4>Total: ${sale.total_price}</h4>
             <div className="sale-items">
               {sale.items?.map((item) => (
                 <div key={item.id} className="sale-item">
