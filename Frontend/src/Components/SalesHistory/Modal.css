@@ -1,8 +1,8 @@
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(30, 10, 60, 0.35);
-  backdrop-filter: blur(6px);
+  background: rgba(30, 10, 60, 0.4);
+  backdrop-filter: blur(8px);
   z-index: 100;
 }
 
@@ -11,28 +11,30 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 420px;
-  max-height: 80vh;
-  background: #ffffff;
-  border-radius: 20px;
-  border: 0.5px solid rgba(123, 70, 255, 0.18);
+  width: 440px;
+  max-height: 82vh;
+  background: var(--surface-strong);
+  border-radius: var(--radius);
+  border: 1.5px solid rgba(123, 70, 255, 0.12);
+  box-shadow: var(--shadow);
   z-index: 1000;
   overflow: hidden;
   box-sizing: border-box;
 }
 
 .modal-header {
-  padding: 20px 24px 16px;
-  border-bottom: 0.5px solid rgba(123, 70, 255, 0.1);
+  padding: 22px 26px 18px;
+  background: var(--bg);
+  border-bottom: 1.5px solid rgba(123, 70, 255, 0.08);
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
 .modal-body {
-  padding: 16px 24px 24px;
+  padding: 20px 24px 28px;
   overflow-y: auto;
-  max-height: calc(80vh - 70px);
+  max-height: calc(82vh - 74px);
 }
 
 .table-modal {
@@ -43,22 +45,33 @@
 }
 
 .table-modal thead tr {
-  background: rgba(123, 70, 255, 0.08);
+  background: rgba(123, 70, 255, 0.07);
+  border-radius: 10px;
 }
 
 .table-modal th {
-  padding: 10px 12px;
+  padding: 11px 14px;
   text-align: left;
-  font-weight: 500;
-  color: var(--primary-dark);
-  font-size: 12px;
+  font-weight: 700;
+  color: var(--primary);
+  font-size: 11px;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.07em;
+}
+
+.table-modal th:first-child {
+  border-radius: 10px 0 0 10px;
+}
+
+.table-modal th:last-child {
+  border-radius: 0 10px 10px 0;
 }
 
 .table-modal tbody tr {
-  border-bottom: 0.5px solid rgba(123, 70, 255, 0.07);
-  transition: background 0.12s;
+  border-bottom: 1px solid rgba(123, 70, 255, 0.06);
+  transition:
+    background 0.15s ease,
+    transform 0.15s ease;
 }
 
 .table-modal tbody tr:last-child {
@@ -66,19 +79,26 @@
 }
 
 .table-modal tbody tr:hover {
-  background: rgba(123, 70, 255, 0.04);
-  color: var(--text);
+  background: rgba(123, 70, 255, 0.05);
+  transform: translateX(2px);
 }
 
 .table-modal td {
-  padding: 10px 12px;
+  padding: 11px 14px;
   color: var(--text);
+  font-size: 0.875rem;
+}
+
+.table-modal td:first-child {
+  font-weight: 600;
+  color: var(--primary-dark);
 }
 
 .no-data {
   text-align: center;
-  padding: 2rem;
+  padding: 2.5rem 1rem;
   color: var(--text-muted);
-  font-size: 1rem;
-  margin-left: 3rem;
+  font-size: 0.95rem;
+  margin: 0;
+  opacity: 0.7;
 }

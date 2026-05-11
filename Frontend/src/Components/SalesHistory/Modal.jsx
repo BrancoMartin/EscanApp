@@ -45,7 +45,7 @@ function Modal({ loading, error, buys }) {
                   <td className="data">
                     {sale.items.map((item) => (
                       <p>
-                        {item.product.name} - {item.quantity}
+                        {item.product_name} - {item.quantity}
                       </p>
                     ))}
                   </td>
