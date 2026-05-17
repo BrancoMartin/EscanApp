@@ -84,7 +84,9 @@ function AddProductOption() {
                 placeholder="Código de barras"
               />
             </label>
-            {errors.barcode && <p className="error">{errors.barcode}</p>}
+            {errors.barcode && (
+              <p className="error">* debe ingresar el código de barras</p>
+            )}
           </div>
 
           <div className="container-label">
@@ -97,7 +99,7 @@ function AddProductOption() {
                 placeholder="Nombre del producto"
               />
             </label>
-            {errors.name && <p className="error">{errors.name}</p>}
+            {errors.name && <p className="error">* debe ingresar el nombre</p>}
           </div>
 
           <div className="container-label">
@@ -111,7 +113,7 @@ function AddProductOption() {
                 placeholder="Precio"
               />
             </label>
-            {errors.price && <p className="error">{errors.price}</p>}
+            {errors.price && <p className="error">* debe ingresar el precio</p>}
           </div>
           <div className="container-label">
             <label className="label-add-product">
@@ -123,7 +125,7 @@ function AddProductOption() {
               />
             </label>
             {errors.description && (
-              <p className="error">{errors.description}</p>
+              <p className="error">* debe ingresar la descripción</p>
             )}
           </div>
         </div>

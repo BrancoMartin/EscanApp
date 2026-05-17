@@ -5,7 +5,7 @@ const addProductValidation = ({ form }) => {
   const names = ["barcode", "name", "price"];
   for (const n of names) {
     if (!form[n].trim()) {
-      errors[n] = `* debe ingresar el ${n}`;
+      errors[n] = `${n}`;
     }
   }
 

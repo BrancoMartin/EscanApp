@@ -22,11 +22,11 @@ body {
 
 .option-panel {
   overflow-x: hidden;
-  min-height: 100vh;
   display: flex;
   flex-direction: column;
   max-width: 100%;
   box-sizing: border-box;
+  height: 100%;
 }
 
 .option-form {

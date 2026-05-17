@@ -49,7 +49,11 @@ function Modal({ loading, error, buys }) {
                       </p>
                     ))}
                   </td>
-                  <td className="data">{sale.state}</td>
+                  {sale.state === "closed" ? (
+                    <td className="data closed">Cerrada</td>
+                  ) : (
+                    <td className="data open">Abierta</td>
+                  )}
                 </tr>
               ))}
           </tbody>
