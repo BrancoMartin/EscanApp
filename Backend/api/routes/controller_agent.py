@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from database import get_db
-from models.attribute_category import AttributeCategory
-from models.attribute_value import AttributeValue
+from models.attribute_category import Category
+from models.attribute_value import Value
 from models.product_attribute_bridge import ProductAttributeBridge
 from models.product import Product
 from dotenv import load_dotenv
@@ -60,7 +60,7 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
 
         print(f"[AGENT] Intent: {intent}")
 
-        if intent == "aumentar_precio":
+        if intent == "aumentar_precios":
             price_type_result = detect_price_increase_type(user_message)
             tipo = price_type_result.get("tipo")
             porcentaje = price_type_result.get("porcentaje")
@@ -69,7 +69,7 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
             if not tipo or not porcentaje:
                 return AgentResponse(
                     message="No entendi bien el aumento. ¿Que porcentaje queres aplicar y a que productos?",
-                    action_executed="aumentar_precio",
+                    action_executed="aumentar_precios",
                     success=False
                 )
 
@@ -80,7 +80,7 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
                 db.commit()
                 return AgentResponse(
                     message=f"Se aumento el precio de TODOS los productos ({len(products)}) un {porcentaje}%",
-                    action_executed="aumentar_precio",
+                    action_executed="aumentar_precios",
                     success=True,
                     data={"updated_products": len(products), "percentage": porcentaje}
                 )
@@ -90,7 +90,7 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
                 if not products:
                     return AgentResponse(
                         message=f"No encontre ningun producto que se llame '{target}'.",
-                        action_executed="aumentar_precio",
+                        action_executed="aumentar_precios",
                         success=False
                     )
                 for p in products:
@@ -99,13 +99,13 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
                 names = ", ".join([p.name for p in products])
                 return AgentResponse(
                     message=f"Se aumento el precio de '{names}' ({len(products)} producto(s)) un {porcentaje}%",
-                    action_executed="aumentar_precio",
+                    action_executed="aumentar_precios",
                     success=True,
                     data={"updated_products": len(products), "percentage": porcentaje, "products": names}
                 )
 
             elif tipo == "por_atributo":
-                cats = db.query(AttributeCategory).all()
+                cats = db.query(Category).all()
                 existing_categories = [{"id": c.id, "name": c.name} for c in cats]
 
                 attr_result = detect_category_and_value(target, existing_categories)
@@ -116,29 +116,29 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
                 if not categoria_inf:
                     return AgentResponse(
                         message=f"No pude determinar a que categoria pertenece '{target}'.",
-                        action_executed="aumentar_precio",
+                        action_executed="aumentar_precios",
                         success=False
                     )
 
                 if not categoria_existe:
-                    nueva_cat = AttributeCategory(name=categoria_inf)
+                    nueva_cat = Category(name=categoria_inf)
                     db.add(nueva_cat)
                     db.commit()
                     db.refresh(nueva_cat)
 
-                cat = db.query(AttributeCategory).filter(AttributeCategory.name == categoria_inf).first()
+                cat = db.query(Category).filter(Category.name == categoria_inf).first()
                 if not cat:
-                    cat = AttributeCategory(name=categoria_inf)
+                    cat = Category(name=categoria_inf)
                     db.add(cat)
                     db.commit()
                     db.refresh(cat)
 
-                attr_val = db.query(AttributeValue).filter(
-                    AttributeValue.category_id == cat.id,
-                    AttributeValue.value == valor
+                attr_val = db.query(Value).filter(
+                    Value.category_id == cat.id,
+                    Value.value == valor
                 ).first()
                 if not attr_val:
-                    attr_val = AttributeValue(category_id=cat.id, value=valor)
+                    attr_val = Value(category_id=cat.id, value=valor)
                     db.add(attr_val)
                     db.commit()
                     db.refresh(attr_val)
@@ -155,7 +155,7 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
                     db.commit()
                     return AgentResponse(
                         message=f"Se aumento un {porcentaje}% a {len(products)} producto(s) con {categoria_inf} = {valor}",
-                        action_executed="aumentar_precio",
+                        action_executed="aumentar_precios",
                         success=True,
                         data={"updated_products": len(products), "category": categoria_inf, "value": valor, "percentage": porcentaje}
                     )
@@ -177,25 +177,25 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
                             db.commit()
                             return AgentResponse(
                                 message=f"Se aumento un {porcentaje}% a {len(products)} producto(s) con {categoria_inf} = {valor}",
-                                action_executed="aumentar_precio",
+                                action_executed="aumentar_precios",
                                 success=True,
                                 data={"updated_products": len(products), "category": categoria_inf, "value": valor, "percentage": porcentaje}
                             )
                     return AgentResponse(
                         message=resolve_result.get("mensaje_usuario", f"No pude determinar que productos tienen {categoria_inf} = {valor}. ¿Podes indicarmelo?"),
-                        action_executed="aumentar_precio",
+                        action_executed="aumentar_precios",
                         success=False,
-                        data={"context": {"intent": "aumentar_precio", "categoria": categoria_inf, "valor": valor, "porcentaje": porcentaje}}
+                        data={"context": {"intent": "aumentar_precios", "categoria": categoria_inf, "valor": valor, "porcentaje": porcentaje}}
                     )
 
             return AgentResponse(
                 message="No pude procesar el aumento. Asegurate de incluir el porcentaje.",
-                action_executed="aumentar_precio",
+                action_executed="aumentar_precios",
                 success=False
             )
 
-        elif intent == "crear_producto":
-            cats = db.query(AttributeCategory).all()
+        elif intent == "crear_productos":
+            cats = db.query(Category).all()
             existing_categories = [{"id": c.id, "name": c.name} for c in cats]
 
             product_data = create_product_with_attributes(user_message, existing_categories)
@@ -257,18 +257,18 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
                     cat_name = attr.get("categoria")
                     val = attr.get("valor")
                     if cat_name and val:
-                        ac = db.query(AttributeCategory).filter(AttributeCategory.name == cat_name).first()
+                        ac = db.query(Category).filter(Category.name == cat_name).first()
                         if not ac:
-                            ac = AttributeCategory(name=cat_name)
+                            ac = Category(name=cat_name)
                             db.add(ac)
                             db.commit()
                             db.refresh(ac)
-                        av = db.query(AttributeValue).filter(
-                            AttributeValue.category_id == ac.id,
-                            AttributeValue.value == val
+                        av = db.query(Value).filter(
+                            Value.category_id == ac.id,
+                            Value.value == val
                         ).first()
                         if not av:
-                            av = AttributeValue(category_id=ac.id, value=val)
+                            av = Value(category_id=ac.id, value=val)
                             db.add(av)
                             db.commit()
                             db.refresh(av)
@@ -293,11 +293,11 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
             )
 
         elif intent == "listar_categorias":
-            cats = db.query(AttributeCategory).all()
+            cats = db.query(Category).all()
             if cats:
                 lines = ["**Categorias y valores disponibles:**\n"]
                 for c in cats:
-                    values = db.query(AttributeValue).filter(AttributeValue.category_id == c.id).all()
+                    values = db.query(Value).filter(Value.category_id == c.id).all()
                     vals_str = ", ".join([v.value for v in values]) if values else "sin valores"
                     lines.append(f"  - {c.name}: {vals_str}")
                 return AgentResponse(
@@ -310,6 +310,40 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
                 message="No hay categorias configuradas. ¿Queres crear alguna?",
                 action_executed="listar_categorias",
                 success=True
+            )
+
+        elif intent == "agregar_atributo":
+            cats = db.query(Category).all()
+            existing_categories = [{"id": c.id, "name": c.name} for c in cats]
+            result = create_product_with_attributes(user_message, existing_categories)
+            if result.get("atributos_inferidos"):
+                attr = result["atributos_inferidos"][0]
+                cat_name = attr.get("categoria")
+                val = attr.get("valor")
+                if cat_name and val:
+                    ac = db.query(Category).filter(Category.name == cat_name).first()
+                    if not ac:
+                        ac = Category(name=cat_name)
+                        db.add(ac)
+                        db.commit()
+                        db.refresh(ac)
+                    av = db.query(Value).filter(
+                        Value.category_id == ac.id,
+                        Value.value == val
+                    ).first()
+                    if not av:
+                        av = Value(category_id=ac.id, value=val)
+                        db.add(av)
+                        db.commit()
+                    return AgentResponse(
+                        message=f"Valor '{val}' agregado a categoria '{cat_name}'.",
+                        action_executed="agregar_atributo",
+                        success=True
+                    )
+            return AgentResponse(
+                message="No entendi que valor y categoria queres agregar.",
+                action_executed="agregar_atributo",
+                success=False
             )
 
         elif intent == "info_incompleta":
@@ -329,10 +363,10 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
             min_price = db.query(Product).with_entities(db.func.min(Product.price)).scalar()
             max_price = db.query(Product).with_entities(db.func.max(Product.price)).scalar()
 
-            cats = db.query(AttributeCategory).all()
+            cats = db.query(Category).all()
             cat_stats = {}
             for c in cats:
-                val_count = db.query(AttributeValue).filter(AttributeValue.category_id == c.id).count()
+                val_count = db.query(Value).filter(Value.category_id == c.id).count()
                 cat_stats[c.name] = val_count
 
             db_stats = {

@@ -2,11 +2,16 @@ import { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import "./AgentChat.css";
 
+const BASE_URL = import.meta.env.PROD ? "" : "http://localhost:8000";
+
 function AgentChat({ onClose }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef(null);
+
+  console.log(input);
+
   const [conversationHistory, setConversationHistory] = useState(() => {
     try {
       return JSON.parse(localStorage.getItem("agentChatHistory") || "[]");
@@ -24,15 +29,15 @@ function AgentChat({ onClose }) {
   const [initialized, setInitialized] = useState(false);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); // esto hace que cada vez que haya un mensaje nuevo baje hasta donde esta este
   };
 
   useEffect(() => {
     const buildWelcomeMessage = async () => {
       try {
-        const catResp = await axios.get("/api/attribute_categories");
+        const catResp = await axios.get(`${BASE_URL}/api/categories`);
         const cats = catResp.data || [];
-        const prodResp = await axios.get("/api/products");
+        const prodResp = await axios.get(`${BASE_URL}/api/products/`);
         const prods = prodResp.data || [];
 
         let examples = [];
@@ -47,7 +52,7 @@ function AgentChat({ onClose }) {
         if (cats.length > 0) {
           const randomCat = cats[Math.floor(Math.random() * cats.length)];
           const valResp = await axios.get(
-            `/api/attribute_values?category_id=${randomCat.id}`,
+            `${BASE_URL}/api/values?category_id=${randomCat.id}`,
           );
           const vals = valResp.data || [];
           if (vals.length > 0) {
@@ -61,7 +66,8 @@ function AgentChat({ onClose }) {
         const welcomeText = `¡Hola! Soy tu asistente de precios. Podes pedirme cosas como:\n\n${examples.map((e, i) => `${i + 1}. ${e}`).join("\n")}`;
 
         setMessages([{ id: 1, type: "assistant", text: welcomeText }]);
-      } catch {
+      } catch (error) {
+        console.log("ERROR", error);
         setMessages([
           {
             id: 1,
@@ -99,7 +105,11 @@ function AgentChat({ onClose }) {
 
     setMessages((prev) => [...prev, userMessage]);
     const sentInput = input;
+
     setInput("");
+
+    console.log("sent input", sentInput);
+    console.log("input", input);
     setLoading(true);
 
     try {
@@ -109,7 +119,7 @@ function AgentChat({ onClose }) {
       }));
 
       const response = await axios.post(
-        "/api/agent/chat",
+        `${BASE_URL}/api/agent/chat`,
         {
           message: sentInput,
           conversation_history: conversationForBackend,
