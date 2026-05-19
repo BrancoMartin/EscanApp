@@ -71,3 +71,23 @@ def create_value(data: ValueInput, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(av)
     return {"id": av.id, "category_id": av.category_id, "value": av.value, "created_at": av.created_at.isoformat() if av.created_at else None}
+
+
+
+def get_or_create_category(db: Session, name: str):
+    category = db.query(AttributeCategory).filter_by(name=name.lower()).first()
+    if not category:
+        category = AttributeCategory(name=name.lower())
+        db.add(category)
+        db.commit()
+        db.refresh(category)
+    return category
+
+def get_or_create_attribute_value(db: Session, category_id: int, value: str):
+    attr_value = db.query(AttributeValue).filter_by(category_id=category_id, value=value).first()
+    if not attr_value:
+        attr_value = AttributeValue(category_id=category_id, value=value)
+        db.add(attr_value)
+        db.commit()
+        db.refresh(attr_value)
+    return attr_value
