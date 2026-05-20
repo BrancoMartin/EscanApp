@@ -1,10 +1,36 @@
 from .ollama_client import call_ollama_json
+from Modelfiles import CreateProduct
+import json
 
 
-def create_product_with_attributes(user_prompt: str, existing_categories: list) -> dict:
-    cats_str = ", ".join([c["name"] if isinstance(c, dict) else c for c in existing_categories]) if existing_categories else "No hay categorias disponibles"
-    message = f"Categorias disponibles: {cats_str}\n\nMensaje del usuario: {user_prompt}"
-    result = call_ollama_json("CreadorProductos", message)
-    if not result or "nombre" not in result:
-        return {"nombre": None, "precio": None, "descripcion": None, "proveedor": None, "atributos_inferidos": []}
-    return result
+def create_product(user_prompt: str, existing_categories: list) -> dict:
+    
+    llm = CreateProduct
+
+    if not existing_categories: 
+        existing_categories = []
+
+    template = "MENSAJE: {user_prompt}, {existing_categories}"
+
+    prompt = PromptTemplate(
+        input_variables=[user_prompt, existing_categories]
+        template = template,
+    )
+
+    chain = prompt | llm
+
+    try: 
+        response = chain.invoke({
+            "user_message": prompt,
+        })
+
+        content = response.strip()
+        # Limpiar markdown y códigos si están presentes
+        clean = content.replace("```json", "").replace("```", "").strip()
+        data = json.loads(clean)
+        
+        return data
+    except Exception as e: 
+        print(f"Error detecting intent: {e}")
+        return {"intent": "consulta_general", "confidence": 0.5, "error": str(e)}
+

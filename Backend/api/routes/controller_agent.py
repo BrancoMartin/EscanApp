@@ -55,8 +55,7 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
         conversation_history = chat_msg.conversation_history or []
         context = chat_msg.context or {}
 
-        intent_result = detect_intent(user_message)
-        intent = intent_result.get("intent", "consulta_general")
+        intent = detect_intent(user_message, conversation_history)
 
         print(f"[AGENT] Intent: {intent}")
 

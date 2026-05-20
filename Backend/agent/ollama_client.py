@@ -1,56 +1,63 @@
-import requests
-import json
 import os
 from dotenv import load_dotenv
+from langchain_ollama import OllamaLLM
+from Modelfiles import CualifiquerIntent
+from Modelfiles import CreateProduct
+from Modelfiles import AttributeResolver
+from Modelfiles import AttributeExtractor
+from Modelfiles import AttributeClassifier
+from Modelfiles import IncompletHandler
+from Modelfiles import IncreaseDetector
 
 load_dotenv()
 
-OLLAMA_URL = "http://localhost:11434/api/chat"
-DEFAULT_MODEL = "gemma3:4b"
+DEFAULT_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:0.5b")
+OLLAMA_BASE_URL = "http://localhost:11434"
 
+def get_llm():
+    return OllamaLLM(
+        model=DEFAULT_MODEL,
+        base_url=OLLAMA_BASE_URL,
+    )
 
-def get_model() -> str:
-    return os.environ.get("OLLAMA_MODEL", DEFAULT_MODEL)
+def get_intent():
+    return OllamaLLM(
+        model=CualifiquerIntent,
+        base_url=OLLAMA_BASE_URL
+    )
 
+def get_create_product():
+    return OllamaLLM(
+        model=CreateProduct,
+        base_url=OLLAMA_BASE_URL
+    )
 
-def parse_json_response(raw: str) -> dict | None:
-    try:
-        first = raw.index("{")
-        last = raw.rindex("}")
-        clean = raw[first:last+1]
-        return json.loads(clean)
-    except (ValueError, json.JSONDecodeError):
-        return None
+def get_attribute_extractor():
+    return OllamaLLM(
+        model=AttributeExtractor, 
+        base_url=OLLAMA_BASE_URL
+    )
 
+def get_attribute_classifier():
+    return OllamaLLM(
+        model=AttributeClassifier, 
+        base_url=OLLAMA_BASE_URL
+    )
 
-def call_ollama(model: str, user_message: str, timeout: int = 60) -> str | None:
-    payload = {
-        "model": model,
-        "messages": [
-            {"role": "user", "content": user_message}
-        ],
-        "stream": False,
-        "options": {"temperature": 0}
-    }
-    try:
-        resp = requests.post(OLLAMA_URL, json=payload, timeout=timeout)
-        resp.raise_for_status()
-        data = resp.json()
-        return data.get("message", {}).get("content", "")
-    except requests.exceptions.ConnectionError:
-        print(f"[OLLAMA] No se pudo conectar a {OLLAMA_URL}")
-        return None
-    except Exception as e:
-        print(f"[OLLAMA] Error: {e}")
-        return None
+def get_attribute_resolver():
+    return OllamaLLM(
+        model=AttributeResolver,
+        base_url=OLLAMA_BASE_URL
+    )
 
+def get_incomplete_handler():
+    return OllamaLLM(
+        model=IncompletHandler,
+        base_url=OLLAMA_BASE_URL
+    )
 
-def call_ollama_json(model: str, user_message: str, timeout: int = 60) -> dict:
-    raw = call_ollama(model, user_message, timeout)
-    if raw is None:
-        return {}
-    parsed = parse_json_response(raw)
-    if parsed is None:
-        print(f"[OLLAMA] No se pudo parsear JSON. Raw: {raw[:200]}")
-        return {}
-    return parsed
+def get_increase_detector():
+    return OllamaLLM(
+        model=IncreaseDetector,
+        base_url=OLLAMA_BASE_URL
+    )
