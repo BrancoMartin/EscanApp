@@ -1,12 +1,11 @@
 from .ollama_client import call_ollama_json
 import json
 from langchain_core.prompts import PromptTemplate
-from .ollama_client import get_intent()
+from .ollama_client import get_intent
 
 def detect_intent(message: str, conversation_history: list = None, llm=None) -> dict:
     
-    
-    llm = get_intent() # este deberia ser el modelo de ollama especifico para intent
+    llm = get_intent() 
     
     if conversation_history is None:
         conversation_history = []

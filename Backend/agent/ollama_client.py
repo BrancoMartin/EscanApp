@@ -8,6 +8,7 @@ from Modelfiles import AttributeExtractor
 from Modelfiles import AttributeClassifier
 from Modelfiles import IncompletHandler
 from Modelfiles import IncreaseDetector
+from Modelfiles import GeneralConsultant
 
 load_dotenv()
 
@@ -59,5 +60,11 @@ def get_incomplete_handler():
 def get_increase_detector():
     return OllamaLLM(
         model=IncreaseDetector,
+        base_url=OLLAMA_BASE_URL
+    )
+
+def get_general_consultant():
+    return OllamaLLM(
+        model=GeneralConsultant,
         base_url=OLLAMA_BASE_URL
     )

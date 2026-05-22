@@ -1,13 +1,36 @@
-from .ollama_client import call_ollama_json
+import json
+from langchain_core.prompts import PromptTemplate
+from .ollama_client import get_attribute_classifier
 
 
 def detect_category_and_value(target: str, existing_categories: list) -> dict:
     cats_str = ", ".join([c["name"] if isinstance(c, dict) else c for c in existing_categories]) if existing_categories else "No hay categorias disponibles"
-    message = f"Target: {target}\nCategorias existentes: {cats_str}"
-    result = call_ollama_json("ClasificadorAtributo", message)
 
-    print("RESULTADO DEL CLASIFICADOR DE CATEGORIAS", result)
+    llm = get_attribute_classifier()
 
-    if not result or "categoria_inferida" not in result:
+    template = "Target: {target}\nCategorias existentes: {categories}"
+
+    prompt = PromptTemplate(
+        input_variables=["target", "categories"],
+        template=template,
+    )
+
+    chain = prompt | llm
+
+    try:
+        response = chain.invoke({
+            "target": target,
+            "categories": cats_str
+        })
+
+        clean = response.strip().replace("```json", "").replace("```", "").strip()
+        data = json.loads(clean)
+
+        print("RESULTADO DEL CLASIFICADOR DE CATEGORIAS", data)
+
+        if not data or "categoria_inferida" not in data:
+            return {"categoria_inferida": None, "valor": target, "categoria_existe": False}
+        return data
+    except Exception as e:
+        print(f"Error classifying attribute: {e}")
         return {"categoria_inferida": None, "valor": target, "categoria_existe": False}
-    return result

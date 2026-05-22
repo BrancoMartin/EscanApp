@@ -1,4 +1,6 @@
-from .ollama_client import call_ollama_json
+import json
+from langchain_core.prompts import PromptTemplate
+from .ollama_client import get_attribute_resolver
 
 
 def resolve_attribute_in_db(categoria: str, valor: str, categoria_existe: bool, productos: list) -> dict:
@@ -13,8 +15,30 @@ def resolve_attribute_in_db(categoria: str, valor: str, categoria_existe: bool, 
             lines.append(f"ID: {p_id} | Nombre: {p_name} | Descripcion: {p_desc}")
         prod_str = "\n".join(lines)
 
-    message = f"Atributo buscado: categoria \"{categoria}\", valor \"{valor}\"\n\nLista de productos disponibles:\n{prod_str}"
-    result = call_ollama_json("ResolvedorAtributo", message)
-    if not result or "puede_inferir" not in result:
+    llm = get_attribute_resolver()
+
+    template = "Atributo buscado: categoria \"{categoria}\", valor \"{valor}\"\n\nLista de productos disponibles:\n{productos}"
+
+    prompt = PromptTemplate(
+        input_variables=["categoria", "valor", "productos"],
+        template=template,
+    )
+
+    chain = prompt | llm
+
+    try:
+        response = chain.invoke({
+            "categoria": categoria,
+            "valor": valor,
+            "productos": prod_str
+        })
+
+        clean = response.strip().replace("```json", "").replace("```", "").strip()
+        data = json.loads(clean)
+
+        if not data or "puede_inferir" not in data:
+            return {"puede_inferir": False, "productos_detectados": [], "mensaje_usuario": "No se pudo determinar. Por favor indicanos que productos tienen este atributo."}
+        return data
+    except Exception as e:
+        print(f"Error resolving attribute: {e}")
         return {"puede_inferir": False, "productos_detectados": [], "mensaje_usuario": "No se pudo determinar. Por favor indicanos que productos tienen este atributo."}
-    return result
