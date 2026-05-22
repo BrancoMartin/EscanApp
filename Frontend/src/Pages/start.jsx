@@ -33,9 +33,12 @@ function Start() {
         >
           <span className="agent-icon">🤖</span>
         </button>
-        <div className="agent-tooltip">
-          AJUSTA LOS PRECIOS DE TUS PRODUCTOS. Hablando con este agente ia
-        </div>
+
+        {!showAgent && (
+          <div className="agent-tooltip">
+            AJUSTA LOS PRECIOS DE TUS PRODUCTOS. Hablando con este agente ia
+          </div>
+        )}
       </div>
 
       {showAgent && <AgentChat onClose={() => setShowAgent(false)} />}
