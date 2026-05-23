@@ -63,7 +63,7 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
             price_type_result = detect_price_increase_type(user_message)
             tipo = price_type_result.get("tipo")
             porcentaje = price_type_result.get("porcentaje")
-            target = price_type_result.get("target")
+            value = price_type_result.get("value")
 
             if not tipo or not porcentaje:
                 return AgentResponse(
@@ -85,10 +85,10 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
                 )
 
             elif tipo == "individual":
-                products = db.query(Product).filter(Product.name.ilike(f"%{target}%")).all()
+                products = db.query(Product).filter(Product.name.ilike(f"%{value}%")).all()
                 if not products:
                     return AgentResponse(
-                        message=f"No encontre ningun producto que se llame '{target}'.",
+                        message=f"No encontre ningun producto que se llame '{value}'.",
                         action_executed="aumentar_precios",
                         success=False
                     )
@@ -107,14 +107,14 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
                 cats = db.query(Category).all()
                 existing_categories = [{"id": c.id, "name": c.name} for c in cats]
 
-                attr_result = detect_category_and_value(target, existing_categories)
+                attr_result = detect_category_and_value(value, existing_categories)
                 categoria_inf = attr_result.get("categoria_inferida")
                 valor = attr_result.get("valor")
                 categoria_existe = attr_result.get("categoria_existe", False)
 
                 if not categoria_inf:
                     return AgentResponse(
-                        message=f"No pude determinar a que categoria pertenece '{target}'.",
+                        message=f"No pude determinar a que categoria pertenece '{value}'.",
                         action_executed="aumentar_precios",
                         success=False
                     )

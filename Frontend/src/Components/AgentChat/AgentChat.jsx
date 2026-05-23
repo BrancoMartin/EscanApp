@@ -118,6 +118,8 @@ function AgentChat({ onClose }) {
         assistant: msg.assistant || "",
       }));
 
+      console.log("mensaje: ", sentInput);
+
       const response = await axios.post(
         `${BASE_URL}/api/agent/chat`,
         {
@@ -152,6 +154,11 @@ function AgentChat({ onClose }) {
       localStorage.setItem("agentChatHistory", JSON.stringify(newHistory));
 
       if (data.data && data.data.context) {
+        console.log("CONTEXTO: ", data.data.context);
+
+        // ME PARECE QUE ACA PODRIA AGREGARSE data.data.context DIRECTAMENTE AL STORAGE DEL CONTEXTO
+        // EN VEZ DE METERLO PRIMERO AL STATE DE CONTEXT Y LUEGO EJECUTAR EL USEEFECT
+
         setContext(data.data.context);
       }
     } catch (error) {
