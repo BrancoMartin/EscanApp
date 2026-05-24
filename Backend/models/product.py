@@ -14,3 +14,7 @@ class Product(Base):
     barcode = Column(String, unique=True, nullable=False, index=True)
 
     sale_items = relationship("SaleItem", back_populates="product")
+
+    product_values = relationship("ProductValue", back_populates="product")
+
+    

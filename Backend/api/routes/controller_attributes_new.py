@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from database import get_db
-from models.attribute_category import Category
+from Backend.models.category import Category
 from models.attribute_value import Value
 
 router = APIRouter()

@@ -2,9 +2,9 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from database import get_db
-from models.attribute_category import Category
+from Backend.models.category import Category
 from models.attribute_value import Value
-from models.product_attribute_bridge import ProductAttributeBridge
+from Backend.models.product_value import ProductAttributeBridge
 from models.product import Product
 from dotenv import load_dotenv
 import os
