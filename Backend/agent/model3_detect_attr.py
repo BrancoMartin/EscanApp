@@ -1,12 +1,12 @@
 import json
 from langchain_core.prompts import PromptTemplate
-from .ollama_client import get_attribute_classifier
+from .ollama_client import get_value_classifier
 
 
 def detect_category_and_value(value: str, existing_categories: list) -> dict:
     cats_str = ", ".join([c["name"] if isinstance(c, dict) else c for c in existing_categories]) if existing_categories else "No hay categorias disponibles"
 
-    llm = get_attribute_classifier()
+    llm = get_value_classifier()
 
     template = "Value: {value}\nCategorias existentes: {categories}"
 

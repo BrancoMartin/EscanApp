@@ -3,8 +3,8 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from database import get_db
 from Backend.models.category import Category
-from models.attribute_value import Value
-from Backend.models.product_value import ProductAttributeBridge
+from models.value import Value
+from Backend.models.product_value import ProductValue
 from models.product import Product
 from dotenv import load_dotenv
 import os
@@ -107,10 +107,10 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
                 cats = db.query(Category).all()
                 existing_categories = [{"id": c.id, "name": c.name} for c in cats]
 
-                attr_result = detect_category_and_value(value, existing_categories)
-                categoria_inf = attr_result.get("categoria_inferida")
-                valor = attr_result.get("valor")
-                categoria_existe = attr_result.get("categoria_existe", False)
+                category_and_value = detect_category_and_value(value, existing_categories)
+                categoria_inf = category_and_value.get("categoria_inferida")
+                valor = category_and_value.get("valor")
+                categoria_existe = category_and_value.get("categoria_existe", False)
 
                 if not categoria_inf:
                     return AgentResponse(
@@ -132,20 +132,21 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
                     db.commit()
                     db.refresh(cat)
 
-                attr_val = db.query(Value).filter(
+                value = db.query(Value).filter(
                     Value.category_id == cat.id,
                     Value.value == valor
                 ).first()
-                if not attr_val:
-                    attr_val = Value(category_id=cat.id, value=valor)
-                    db.add(attr_val)
+                # creamos la value si no existe por las dudas pero deberia existir ya que deberia ser la que ingresa el usuario
+                if not value:
+                    value = Value(category_id=cat.id, value=valor)
+                    db.add(value)
                     db.commit()
-                    db.refresh(attr_val)
+                    db.refresh(value)
 
-                bridges = db.query(ProductAttributeBridge).filter(
-                    ProductAttributeBridge.attribute_value_id == attr_val.id
+                product_values = db.query(ProductValue).filter(
+                    ProductValue.value_id == value.id
                 ).all()
-                product_ids = [b.product_id for b in bridges]
+                product_ids = [b.product_id for b in product_values]
 
                 if product_ids:
                     products = db.query(Product).filter(Product.id.in_(product_ids)).all()
@@ -164,13 +165,13 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
                         {"id": p.id, "name": p.name, "description": p.description or "", "price": p.price}
                         for p in all_products
                     ]
-                    resolve_result = resolve_attribute_in_db(categoria_inf, valor, categoria_existe, productos_list)
+                    resolve_result = resolve_values_in_db(categoria_inf, valor, categoria_existe, productos_list)
                     if resolve_result.get("puede_inferir"):
                         detected_ids = resolve_result.get("productos_detectados", [])
                         if detected_ids:
                             products = db.query(Product).filter(Product.id.in_(detected_ids)).all()
                             for p in products:
-                                bridge = ProductAttributeBridge(product_id=p.id, attribute_value_id=attr_val.id)
+                                bridge = ProductValue(product_id=p.id, attribute_value_id=value.id)
                                 db.add(bridge)
                                 p.price = round(p.price * (1 + porcentaje / 100), 2)
                             db.commit()
@@ -271,7 +272,7 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
                             db.add(av)
                             db.commit()
                             db.refresh(av)
-                        bridge = ProductAttributeBridge(product_id=product.id, attribute_value_id=av.id)
+                        bridge = ProductValue(product_id=product.id, attribute_value_id=av.id)
                         db.add(bridge)
                 db.commit()
 
@@ -357,7 +358,7 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
 
         else:
             total_products = db.query(Product).count()
-            bridge_count = db.query(ProductAttributeBridge).count()
+            bridge_count = db.query(ProductValue).count()
             avg_price = db.query(Product).with_entities(db.func.avg(Product.price)).scalar()
             min_price = db.query(Product).with_entities(db.func.min(Product.price)).scalar()
             max_price = db.query(Product).with_entities(db.func.max(Product.price)).scalar()

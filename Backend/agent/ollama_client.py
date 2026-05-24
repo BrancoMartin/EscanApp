@@ -3,9 +3,9 @@ from dotenv import load_dotenv
 from langchain_ollama import OllamaLLM
 from Modelfiles import CualifiquerIntent
 from Modelfiles import CreateProduct
-from Modelfiles import AttributeResolver
-from Modelfiles import AttributeExtractor
-from Modelfiles import AttributeClassifier
+from Modelfiles import ValueResolver
+from Modelfiles import ValueExtractor
+from Modelfiles import ValueClassifier
 from Modelfiles import IncompletHandler
 from Modelfiles import IncreaseDetector
 from Modelfiles import GeneralConsultant
@@ -33,21 +33,21 @@ def get_create_product():
         base_url=OLLAMA_BASE_URL
     )
 
-def get_attribute_extractor():
+def get_value_extractor():
     return OllamaLLM(
-        model=AttributeExtractor, 
+        model=ValueExtractor, 
         base_url=OLLAMA_BASE_URL
     )
 
-def get_attribute_classifier():
+def get_value_classifier():
     return OllamaLLM(
-        model=AttributeClassifier, 
+        model=ValueClassifier, 
         base_url=OLLAMA_BASE_URL
     )
 
-def get_attribute_resolver():
+def get_value_resolver():
     return OllamaLLM(
-        model=AttributeResolver,
+        model=ValueResolver,
         base_url=OLLAMA_BASE_URL
     )
 
