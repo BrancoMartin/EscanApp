@@ -16,5 +16,5 @@ class Value(Base):
         UniqueConstraint("category_id", "value", name="uq_category_value"),
     )
 
-    category = relationship("Categories", back_populates="values")
+    category = relationship("Category", back_populates="values")
     product_values = relationship("ProductValue", back_populates="value")
