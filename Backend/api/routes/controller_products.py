@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from services.product_service import ProductService
 from services.sale_service import SaleService
+from models.product_value import ProductValue
 from dependencies import get_product_service, get_sale_service
 from typing import Optional
 from sqlalchemy.orm import Session
@@ -32,12 +33,12 @@ def get_by_barcode(
     return result
 
 def assign_attribute_to_product(db: Session, product_id: int, attribute_value_id: int):
-    exists = db.query(ProductAttribute).filter_by(
+    exists = db.query(ProductValue).filter_by(
         product_id=product_id,
         attribute_value_id=attribute_value_id
     ).first()
     if not exists:
-        pa = ProductAttribute(product_id=product_id, attribute_value_id=attribute_value_id)
+        pa = ProductValue(product_id=product_id, attribute_value_id=attribute_value_id)
         db.add(pa)
         db.commit()
 
