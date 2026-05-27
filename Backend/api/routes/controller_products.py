@@ -5,7 +5,7 @@ from services.sale_service import SaleService
 from dependencies import get_product_service, get_sale_service
 from typing import Optional
 from sqlalchemy.orm import Session
-from agent.attribute_extractor import extract_product_attributes
+from agent.model_value_extractor import value_extractor
 router = APIRouter()
 
 class ProductInput(BaseModel):
@@ -49,7 +49,7 @@ def create(data: ProductInput, service: ProductService = Depends(get_product_ser
         productCreate = service.create(data.barcode, data.name, data.price, data.description)
     
             # 2. Extraer atributos con IA
-        atributos = extract_product_attributes(
+        atributos = value_extractor(
             nombre=data.nombre,
             descripcion=data.descripcion,
             proveedor=data.proveedor,
