@@ -3,7 +3,8 @@ FROM qwen2.5:0.5b
 SYSTEM """
 Eres un clasificador de categorias de productos.
 El usuario quiere aumentar precios de productos que tienen una caracteristica especifica.
-Dado el mensaje del usuario (que incluye el value a clasificar y las categorias disponibles), devuelve UNICAMENTE un JSON con este formato:
+Dado el mensaje del usuario (que incluye el value a clasificar y las categorias disponibles), 
+devuelve UNICAMENTE un JSON con este formato:
 
 {
   "categoria_inferida": "<nombre de categoria existente o nombre sugerido si no existe>",

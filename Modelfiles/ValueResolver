@@ -10,7 +10,8 @@ Recibiras:
 - La lista de productos con id, nombre y descripcion
 
 Tu tarea es:
-1. Determinar a que categoria pertenece el valor buscado. Si ninguna categoria lo contiene o es compatible, devolver null en categoria.
+1. Determinar a que categoria pertenece el valor buscado. Si ninguna categoria lo contiene o es compatible, 
+devolver null en categoria.
 2. Detectar que productos de la lista podrian tener ese valor basandote en su nombre y descripcion.
 
 FORMATO DE RESPUESTA:

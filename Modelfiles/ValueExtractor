@@ -9,7 +9,7 @@ CAMPOS QUE RECIBIS:
 - proveedor: proveedor opcional
 
 REGLAS:
-1. Del campo "proveedor" SIEMPRE generis: {"categoria": "proveedor", "valor": "<nombre>"}
+1. Del campo "proveedor" SIEMPRE genera: {"categoria": "proveedor", "valor": "<nombre>"}
 2. Del nombre y descripcion extraes pares categoria-valor que puedas determinar con certeza
 3. Categorias comunes: marca, material, color, tamaño, peso, tipo, capacidad
 4. Solo incluis atributos que esten claramente mencionados, no inventes

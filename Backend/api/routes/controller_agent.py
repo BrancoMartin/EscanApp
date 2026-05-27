@@ -14,7 +14,7 @@ from agent.model1_intent import detect_intent
 from agent.model2a_create_product import create_product_with_attributes
 from agent.model2b_price_type import detect_price_increase_type
 from agent.model3_detect_attr import detect_category_and_value
-from agent.model4_resolve_attr import resolve_attribute_in_db
+from agent.model4_resolve_attr import resolve_values_in_db
 from agent.model5_incomplete import handle_incomplete_info
 from agent.model6_general import handle_general_query
 
