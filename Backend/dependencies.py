@@ -10,3 +10,5 @@ def get_product_service(db: Session = Depends(get_db)) -> ProductService:
 def get_sale_service(db: Session = Depends(get_db)) -> SaleService:
     return SaleService(db)
 
+def get_category_service(db: Session = Depends(get_db)) -> CategoryService
+

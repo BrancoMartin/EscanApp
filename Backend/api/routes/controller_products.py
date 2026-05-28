@@ -3,10 +3,11 @@ from pydantic import BaseModel
 from services.product_service import ProductService
 from services.sale_service import SaleService
 from models.product_value import ProductValue
-from dependencies import get_product_service, get_sale_service
+from dependencies import get_product_service, get_sale_service, get_ca
 from typing import Optional
 from sqlalchemy.orm import Session
 from agent.model_value_extractor import value_extractor
+from models.category import Category
 router = APIRouter()
 
 class ProductInput(BaseModel):
@@ -50,17 +51,18 @@ def create(data: ProductInput, service: ProductService = Depends(get_product_ser
         productCreate = service.create(data.barcode, data.name, data.price, data.description)
     
             # 2. Extraer atributos con IA
-        atributos = value_extractor(
+        values = value_extractor(
             nombre=data.nombre,
             descripcion=data.descripcion,
             proveedor=data.proveedor,
+            categorias=
         )
 
         # 3. Persistir en BD
-        for attr in atributos:
-            category = crud.get_or_create_category(db, attr["categoria"])
-            attr_value = crud.get_or_create_attribute_value(db, category.id, attr["valor"])
-            crud.assign_attribute_to_product(db, product.id, attr_value.id)
+        for value in values:
+            category = crud.get_or_create_category(db, value["categoria"])
+            value = crud.get_or_create_value(db, category.id, value["valor"])
+            crud.assign_value_to_product(db, product.id, value.id)
 
         return productCreate
 
