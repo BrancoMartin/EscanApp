@@ -86,3 +86,11 @@ class ProductService:
             print(f"Error extracting attributes: {e}")
 
         return products
+    
+    def get_product_by_value(self, id_value):
+        products = self.repo.get_product_by_value(id_value)
+
+        if not products: 
+            raise FileNotFoundError("no se encontraron productos")
+        
+        return products

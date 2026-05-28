@@ -9,7 +9,7 @@ class Value(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     value = Column(String, nullable=False)
     category_id = Column(Integer, ForeignKey("categories.id"), nullable=True)  
-    amount_products = Column(Integer, nullable=False, default=0)
+    amount_products = Column(Integer, nullable=True, default=0)
     created_at = Column(DateTime, default=datetime.now)
 
     __table_args__ = (

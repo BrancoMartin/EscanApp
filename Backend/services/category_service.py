@@ -65,3 +65,25 @@ class CategoryService:
 
     def delete(self, categroy_id: int) -> bool:
         return self.repo.delete(categroy_id)
+    
+    def get_by_name(self, name_category):
+        category = self.repo.get_by_name(name_category)
+
+        if not category: 
+            raise FileNotFoundError("Categoria no encontrada")
+
+
+    def get_or_create_category(self, name_category): 
+
+        category = self.get_by_name(name_category)
+
+        if not category: 
+            category = self.create(name_category)
+
+            # podria poner un breakpoint aca para ver si me devuelve una category o me devuelve un action result
+
+            if not category: 
+                raise ValueError("ocurrio un error al querer crear una categoria en la base de datos")
+            
+        return category
+        
