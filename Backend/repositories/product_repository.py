@@ -17,3 +17,5 @@ class ProductRepository(RepositoryBase[Product]):
         return self.db.query(Product).filter(Product.barcode == barcode).first()
     
 
+    def get_by_name(self, name): 
+        return self.db.query(Product).filter(Product.name == name).first()

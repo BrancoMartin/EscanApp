@@ -5,6 +5,7 @@ from services.product_service import ProductService
 from services.sale_service import SaleService
 from services.category_service import CategoryService
 from services.value_service import ValueService
+from services.product_value_service import ProductValueService
 
 def get_product_service(db: Session = Depends(get_db)) -> ProductService:
     return ProductService(db)
@@ -17,3 +18,6 @@ def get_category_service(db: Session = Depends(get_db)) -> CategoryService:
 
 def get_value_service(db: Session = Depends(get_db)) -> ValueService: 
     return ValueService(db)
+
+def get_product_value_service(db: Session = Depends(get_db)) -> ProductValueService: 
+    return ProductValueService(db)
