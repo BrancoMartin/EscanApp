@@ -23,9 +23,12 @@ class ValueService:
         if not name or name.strip() == "":
             raise ValueError("El nombre es obligatorio")
        
+        if not category_id: 
+            raise value("el id de la categoria no esta")
         
+        created_at = date.today()
        
-        value = Value(value=name, category_id=category_id)
+        value = Value(value=name, category_id=category_id, created_at=created_at)
         response = self.repo.create(value)
 
         return {
@@ -51,6 +54,7 @@ class ValueService:
         amount_product = len(self.product.get_product_by_value(value.id))
        
         value.name = name
+        value.amount_products = amount_product
     
         response = self.repo.update(value)
 
@@ -66,3 +70,18 @@ class ValueService:
     def delete(self, categroy_id: int) -> bool:
         return self.repo.delete(categroy_id)
     
+
+    def get_by_name_and_category_id(self, category_id, value): 
+        value = self.repo(category_id, value)
+
+        return value    
+
+    def get_or_create_value(self, category_id, value): 
+
+        value = self.get_by_name_and_category_id(category_id, value)
+
+        if not value: 
+            value = self.create(value, category_id)
+
+        return value
+        

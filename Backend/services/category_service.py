@@ -69,8 +69,7 @@ class CategoryService:
     def get_by_name(self, name_category):
         category = self.repo.get_by_name(name_category)
 
-        if not category: 
-            raise FileNotFoundError("Categoria no encontrada")
+        return category
 
 
     def get_or_create_category(self, name_category): 
