@@ -51,7 +51,7 @@ def assign_attribute_to_product(db: Session, product_id: int, attribute_value_id
 # Create product
 @router.post("/")
 def create(data: ProductInput, service: ProductService = Depends(get_product_service), service_category: CategoryService = Depends(get_category_service),
-           service_value: ValueService = Depends(get_value_service),  service_product_value: ProductValueService = Depends()):
+           service_value: ValueService = Depends(get_value_service),  service_product_value: ProductValueService = Depends(get_product_value_service)):
     try:
         print("Intentando crear producto con datos:", data)
         productCreate = service.create(data.barcode, data.name, data.price, data.description)
