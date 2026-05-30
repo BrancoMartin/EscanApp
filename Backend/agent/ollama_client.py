@@ -1,14 +1,7 @@
 import os
 from dotenv import load_dotenv
 from langchain_ollama import OllamaLLM
-from Modelfiles import CualifiquerIntent
-from Modelfiles import CreateProduct
-from Modelfiles import ValueResolver
-from Modelfiles import ValueExtractor
-from Modelfiles import ValueClassifier
-from Modelfiles import IncompletHandler
-from Modelfiles import IncreaseDetector
-from Modelfiles import GeneralConsultant
+
 
 load_dotenv()
 
@@ -26,7 +19,7 @@ def get_llm():
 # crear_categoria etc.
 def get_intent():
     return OllamaLLM(
-        model=CualifiquerIntent,
+        model="cualifiquer-intent",
         base_url=OLLAMA_BASE_URL
     )
 
@@ -38,7 +31,7 @@ def get_intent():
 # a ingresar y ahi si que cree el producto.
 def get_create_product():
     return OllamaLLM(
-        model=CreateProduct,
+        model="create-product",
         base_url=OLLAMA_BASE_URL
     )
 
@@ -47,7 +40,7 @@ def get_create_product():
 # GENERE LA CATEGORIA Y EL VALOR
 def get_value_extractor():
     return OllamaLLM(
-        model=ValueExtractor, 
+        model="value-extractor", 
         base_url=OLLAMA_BASE_URL
     )
 
@@ -56,7 +49,7 @@ def get_value_extractor():
 
 def get_value_classifier():
     return OllamaLLM(
-        model=ValueClassifier, 
+        model="value-classifier", 
         base_url=OLLAMA_BASE_URL
     )
 
@@ -67,7 +60,7 @@ def get_value_classifier():
 # o también se podria crear en el caso de que ya tengamos creados productos y categorias en la db y querramos pasarselo a este modelo para que determine que productos poseen ese value y a que categoria pertenece ese value
 def get_value_resolver():
     return OllamaLLM(
-        model=ValueResolver,
+        model="value-resolver",
         base_url=OLLAMA_BASE_URL
     )
 
@@ -76,7 +69,7 @@ def get_value_resolver():
 #ESTE SE EJECUTA CUANDO EL USUARIO HACE UN PROMPT AL CUAL LE FALTA INFORMACION Y EL MODELO LE DA UNA RESPUESTA INDICANDOLE LO QUE HACE FALTA PARA REALIZAR UNA ACCION
 def get_incomplete_handler():
     return OllamaLLM(
-        model=IncompletHandler,
+        model="incomplet-handler",
         base_url=OLLAMA_BASE_URL
     )
 
@@ -85,7 +78,7 @@ def get_incomplete_handler():
 # DETECTA EL TIPO DE AUMENTO QUE EL USUARIO QUIERE HACER OSEA todos, por valor, por producto
 def get_increase_detector():
     return OllamaLLM(
-        model=IncreaseDetector,
+        model="increase-detector",
         base_url=OLLAMA_BASE_URL
     )
 
@@ -93,6 +86,6 @@ def get_increase_detector():
 # RESPONDE LAS DUDAS DEL USUARIO EN MODO ASESOR FINANCIERO
 def get_general_consultant():
     return OllamaLLM(
-        model=GeneralConsultant,
+        model="general-consultant",
         base_url=OLLAMA_BASE_URL
     )
