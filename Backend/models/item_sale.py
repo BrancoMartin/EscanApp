@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, Float, ForeignKey
 from sqlalchemy.orm import relationship
-from database import Base
+from Backend.database import Base
 
 
 class SaleItem(Base):

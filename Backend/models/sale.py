@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Date, DateTime, Integer, Float, Enum
 from sqlalchemy.orm import relationship
 
-from database import Base
+from Backend.database import Base
 from datetime import datetime
 
 
