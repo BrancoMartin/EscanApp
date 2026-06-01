@@ -59,19 +59,20 @@ def create(data: ProductInput, service: ProductService = Depends(get_product_ser
         categories = service_category.get_all()
     
             # 2. Extraer atributos con IA
-        values = value_extractor(
-            nombre=data.nombre,
-            descripcion=data.descripcion,
-            proveedor=data.proveedor,
-            categorias=categories
+        result = value_extractor(
+            nombre=data.name,
+            descripcion=data.description,
+            proveedor=None,
+            categoria=categories
         )
 
         # 3. Persistir en BD
-        for value in values:
-            category = service_category.get_or_create_category(value["categoria"])
-            value = service_value.get_or_create_value(category.id, value["valor"])
+        values = result.get("atributos", [])
+        for val in values:
+            category = service_category.get_or_create_category(val["categoria"])
+            value_obj = service_value.get_or_create_value(category.id, val["valor"])
             product = service.get_by_name(data.name)
-            product_value = service_product_value.create(product.id, value.id)
+            product_value = service_product_value.get_or_create(product.id, value_obj.id)
 
         return productCreate
 

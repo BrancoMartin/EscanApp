@@ -77,12 +77,10 @@ class CategoryService:
         category = self.get_by_name(name_category)
 
         if not category: 
-            category = self.create(name_category)
+            created = self.create(name_category)
+            if isinstance(created, dict):
+                return self.repo.get_by_id(created["category"]["id"])
+            return created
 
-            # podria poner un breakpoint aca para ver si me devuelve una category o me devuelve un action result
-
-            if not category: 
-                raise ValueError("ocurrio un error al querer crear una categoria en la base de datos")
-            
         return category
         

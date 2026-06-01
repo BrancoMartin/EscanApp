@@ -15,6 +15,6 @@ class ValueRepository(RepositoryBase[Value]):
         self.db = db
 
     def get_by_name_and_category_id(self, category_id, value): 
-        return self.db.query(Value).filter(Value.category_id == category_id, Value.value == value)
+        return self.db.query(Value).filter(Value.category_id == category_id, Value.value == value).first()
 
   

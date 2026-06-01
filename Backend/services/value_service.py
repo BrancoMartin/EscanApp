@@ -8,7 +8,8 @@ from Backend.services.product_service import ProductService
 
 class ValueService: 
     def __init__(self, db:Session): 
-        self.product = ProductService()
+        self.product = ProductService(db)
+        self.repo = ValueRepository(db)
 
     def get_all(self) -> List[Value]:
         return self.repo.get_all()
@@ -24,7 +25,7 @@ class ValueService:
             raise ValueError("El nombre es obligatorio")
        
         if not category_id: 
-            raise value("el id de la categoria no esta")
+            raise ValueError("el id de la categoria no esta")
         
         created_at = date.today()
        
@@ -35,7 +36,7 @@ class ValueService:
     "success": True,
     "value": {
         "id": response.id,
-        "name": response.name,
+        "name": response.value,
         "created_at": response.created_at
     }}
 
@@ -53,7 +54,7 @@ class ValueService:
         
         amount_product = len(self.product.get_product_by_value(value.id))
        
-        value.name = name
+        value.value = name
         value.amount_products = amount_product
     
         response = self.repo.update(value)
@@ -62,7 +63,7 @@ class ValueService:
     "success": True,
     "value": {
         "id": response.id,
-        "name": response.name,
+        "name": response.value,
         "created_at": response.created_at
     }}
 
@@ -71,17 +72,17 @@ class ValueService:
         return self.repo.delete(categroy_id)
     
 
-    def get_by_name_and_category_id(self, category_id, value): 
-        value = self.repo(category_id, value)
+    def get_by_name_and_category_id(self, category_id, value_name): 
+        return self.repo.get_by_name_and_category_id(category_id, value_name)
 
-        return value    
+    def get_or_create_value(self, category_id, value_name): 
+        existing = self.get_by_name_and_category_id(category_id, value_name)
 
-    def get_or_create_value(self, category_id, value): 
+        if not existing: 
+            created = self.create(value_name, category_id)
+            if isinstance(created, dict):
+                return self.repo.get_by_id(created["value"]["id"])
+            return created
 
-        value = self.get_by_name_and_category_id(category_id, value)
-
-        if not value: 
-            value = self.create(value, category_id)
-
-        return value
+        return existing
         

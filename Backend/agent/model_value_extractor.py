@@ -8,7 +8,7 @@ def value_extractor(nombre,descripcion,proveedor, categoria):
     llm = get_value_extractor()
 
     template = """
-                Tipo de respuesta: {"atributos": [{"categoria": "proveedor", "valor": "Deportes SA"}, {"categoria": "marca", "valor": "Nike"}, {"categoria": "material", "valor": "cuero"}]}
+                Tipo de respuesta: {{"atributos": [{{"categoria": "proveedor", "valor": "Deportes SA"}}, {{"categoria": "marca", "valor": "Nike"}}, {{"categoria": "material", "valor": "cuero"}}]}}
                 "{nombre}", "{descripcion}", "{proveedor}, Categorias Existentes: {categoria}"
             """
 

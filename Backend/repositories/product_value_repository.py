@@ -11,3 +11,6 @@ class ProductValueRepository(RepositoryBase[ProductValue]):
         self.db = db
 
 
+    def get_by_ids(self, product_id, value_id): 
+
+        return self.db.query(ProductValue).filter(ProductValue.product_id == product_id, ProductValue.value_id == value_id)

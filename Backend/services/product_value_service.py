@@ -39,4 +39,11 @@ class ProductValueService:
         return product
 
     
+    def get_or_create(self, product_id, value_id): 
+        product = self.repo.get_by_ids(product_id, value_id)
 
+        if not product: 
+            product = self.repo.create(product_id, value_id)
+
+        return product
+            

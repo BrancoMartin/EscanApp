@@ -94,3 +94,12 @@ class ProductService:
             raise FileNotFoundError("no se encontraron productos")
         
         return products
+    
+    def get_by_name(self, name): 
+
+        product = self.repo.get_by_name(name)
+
+        if not product: 
+            raise ValueError(product)
+        
+        return product
