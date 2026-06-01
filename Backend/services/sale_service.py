@@ -1,9 +1,9 @@
 from sqlalchemy.orm import Session
-from repositories.sale_repository import SaleRepository
-from repositories.product_repository import ProductRepository
-from models.sale import Sale
-from models.item_sale import SaleItem
-from models.product import Product
+from Backend.repositories.sale_repository import SaleRepository
+from Backend.repositories.product_repository import ProductRepository
+from Backend.models.sale import Sale
+from Backend.models.item_sale import SaleItem
+from Backend.models.product import Product
 from datetime import datetime, date
 
 

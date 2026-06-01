@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
-from repositories.category_repository import CategoryRepository
-from models.category import Category
+from Backend.repositories.category_repository import CategoryRepository
+from Backend.models.category import Category
 from typing import List
 from datetime import date
 

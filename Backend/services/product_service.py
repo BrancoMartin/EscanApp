@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
-from repositories.product_repository import ProductRepository
-from models.product import Product
+from Backend.repositories.product_repository import ProductRepository
+from Backend.models.product import Product
 from typing import List
 
 

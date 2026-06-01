@@ -1,4 +1,4 @@
-from .ollama_client import call_ollama_json
+
 import json
 from langchain_core.prompts import PromptTemplate
 from .ollama_client import get_intent

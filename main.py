@@ -1,7 +1,7 @@
 import sys
 
 import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'backend'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'Backend'))
 
 import threading
 import time
@@ -12,8 +12,6 @@ from Backend.api.app import create_app
 HOST = "127.0.0.1"
 PORT = 8000
 
-
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'backend'))
 
 def start_server():
     app = create_app()

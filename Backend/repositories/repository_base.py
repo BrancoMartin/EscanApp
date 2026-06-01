@@ -1,6 +1,6 @@
 from typing import TypeVar, Generic, Type, List, Optional
 from sqlalchemy.orm import Session
-from Exceptions.InfrastructureError.InfrastructureError import (DatabaseIntegrityError, DatabaseOperationalError, DatabaseProgrammingError
+from Backend.Exceptions.InfrastructureError.InfrastructureError import (DatabaseIntegrityError, DatabaseOperationalError, DatabaseProgrammingError
 )
 
 #DATABASE INTEGRITY ERROR: UNIQUE constraint, Foreign Key, NOT NULL, Duplicados

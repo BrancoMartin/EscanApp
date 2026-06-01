@@ -1,5 +1,5 @@
 import json
-from langchain.prompts import PromptTemplate
+from langchain_core.prompts import PromptTemplate
 from .ollama_client import get_increase_detector
 
 

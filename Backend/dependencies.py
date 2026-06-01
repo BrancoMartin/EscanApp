@@ -1,11 +1,11 @@
 from sqlalchemy.orm import Session
 from fastapi import Depends
-from database import get_db
-from services.product_service import ProductService
-from services.sale_service import SaleService
-from services.category_service import CategoryService
-from services.value_service import ValueService
-from services.product_value_service import ProductValueService
+from Backend.database import get_db
+from Backend.services.product_service import ProductService
+from Backend.services.sale_service import SaleService
+from Backend.services.category_service import CategoryService
+from Backend.services.value_service import ValueService
+from Backend.services.product_value_service import ProductValueService
 
 def get_product_service(db: Session = Depends(get_db)) -> ProductService:
     return ProductService(db)

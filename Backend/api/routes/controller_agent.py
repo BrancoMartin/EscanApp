@@ -1,22 +1,22 @@
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from database import get_db
+from Backend.database import get_db
 from Backend.models.category import Category
-from models.value import Value
+from Backend.models.value import Value
 from Backend.models.product_value import ProductValue
-from models.product import Product
+from Backend.models.product import Product
 from dotenv import load_dotenv
 import os
 import re
 
-from agent.model1_intent import detect_intent
-from agent.model2a_create_product import create_product_with_attributes
-from agent.model2b_price_type import detect_price_increase_type
-from agent.model3_detect_attr import detect_category_and_value
-from agent.model4_resolve_attr import resolve_values_in_db
-from agent.model5_incomplete import handle_incomplete_info
-from agent.model6_general import handle_general_query
+from Backend.agent.model1_intent import detect_intent
+from Backend.agent.model2a_create_product import create_product_with_attributes
+from Backend.agent.model2b_price_type import detect_price_increase_type
+from Backend.agent.model3_detect_attr import detect_category_and_value
+from Backend.agent.model4_resolve_attr import resolve_value_in_db
+from Backend.agent.model5_incomplete import handle_incomplete_info
+from Backend.agent.model6_general import handle_general_query
 
 load_dotenv()
 
@@ -165,13 +165,13 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
                         {"id": p.id, "name": p.name, "description": p.description or "", "price": p.price}
                         for p in all_products
                     ]
-                    resolve_result = resolve_values_in_db(categoria_inf, valor, categoria_existe, productos_list)
+                    resolve_result = resolve_value_in_db(categoria_inf, valor, categoria_existe, productos_list)
                     if resolve_result.get("puede_inferir"):
                         detected_ids = resolve_result.get("productos_detectados", [])
                         if detected_ids:
                             products = db.query(Product).filter(Product.id.in_(detected_ids)).all()
                             for p in products:
-                                bridge = ProductValue(product_id=p.id, attribute_value_id=value.id)
+                                bridge = ProductValue(product_id=p.id, value_id=value.id)
                                 db.add(bridge)
                                 p.price = round(p.price * (1 + porcentaje / 100), 2)
                             db.commit()
@@ -272,7 +272,7 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
                             db.add(av)
                             db.commit()
                             db.refresh(av)
-                        bridge = ProductValue(product_id=product.id, attribute_value_id=av.id)
+                        bridge = ProductValue(product_id=product.id, value_id=av.id)
                         db.add(bridge)
                 db.commit()
 

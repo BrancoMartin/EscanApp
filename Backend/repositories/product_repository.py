@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
-from models.product import Product
+from Backend.models.product import Product
 
-from repositories.repository_base import RepositoryBase
+from Backend.repositories.repository_base import RepositoryBase
 
 
 class ProductRepository(RepositoryBase[Product]):

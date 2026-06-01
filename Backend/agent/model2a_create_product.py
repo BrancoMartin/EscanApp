@@ -1,10 +1,10 @@
-from .ollama_client import call_ollama_json
-from ollama_client import get_create_product
+
+from .ollama_client import get_create_product
 from langchain_core.prompts import PromptTemplate
 import json
 
 
-def create_product(user_prompt: str, existing_categories: list) -> dict:
+def create_product_with_attributes(user_prompt: str, existing_categories: list) -> dict:
     
     llm = get_create_product()
 
@@ -14,7 +14,7 @@ def create_product(user_prompt: str, existing_categories: list) -> dict:
     template = "MENSAJE: {user_prompt}, {existing_categories}"
 
     prompt = PromptTemplate(
-        input_variables=["user_prompt", "existing_categories"]
+        input_variables=["user_prompt", "existing_categories"],
         template = template,
     )
 

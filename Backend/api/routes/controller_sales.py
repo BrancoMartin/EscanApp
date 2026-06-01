@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from services.sale_service import SaleService
-from dependencies import get_sale_service
+from Backend.services.sale_service import SaleService
+from Backend.dependencies import get_sale_service
 from sqlalchemy.orm import Session
 from typing import List
 

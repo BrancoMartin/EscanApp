@@ -1,9 +1,9 @@
 from sqlalchemy.orm import Session
-from repositories.value_repository import ValueRepository
-from models.value import Value
+from Backend.repositories.value_repository import ValueRepository
+from Backend.models.value import Value
 from typing import List
 from datetime import date
-from services.product_service import ProductService
+from Backend.services.product_service import ProductService
 
 
 class ValueService: 

@@ -1,17 +1,17 @@
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
-from services.category_service import CategoryService
-from services.product_service import ProductService
-from services.sale_service import SaleService
-from models.product_value import ProductValue
-from services.value_service import ValueService
-from services.product_value_service import ProductValueService
-from dependencies import get_product_service, get_sale_service, get_category_service, get_value_service, get_product_value_service
+from Backend.services.category_service import CategoryService
+from Backend.services.product_service import ProductService
+from Backend.services.sale_service import SaleService
+from Backend.models.product_value import ProductValue
+from Backend.services.value_service import ValueService
+from Backend.services.product_value_service import ProductValueService
+from Backend.dependencies import get_product_service, get_sale_service, get_category_service, get_value_service, get_product_value_service
 from typing import Optional
 from sqlalchemy.orm import Session
-from agent.model_value_extractor import value_extractor
-from models.category import Category
-from models.value import Value
+from Backend.agent.model_value_extractor import value_extractor
+from Backend.models.category import Category
+from Backend.models.value import Value
 
 router = APIRouter()
 
@@ -38,13 +38,13 @@ def get_by_barcode(
         raise HTTPException(status_code=404, detail="Producto no encontrado")
     return result
 
-def assign_attribute_to_product(db: Session, product_id: int, attribute_value_id: int):
+def assign_attribute_to_product(db: Session, product_id: int, value_id: int):
     exists = db.query(ProductValue).filter_by(
         product_id=product_id,
-        attribute_value_id=attribute_value_id
+        value_id=value_id
     ).first()
     if not exists:
-        pa = ProductValue(product_id=product_id, attribute_value_id=attribute_value_id)
+        pa = ProductValue(product_id=product_id, value_id=value_id)
         db.add(pa)
         db.commit()
 

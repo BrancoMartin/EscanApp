@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
-from repositories.product_value_repository import ProductValueRepository
-from repositories.product_repository import ProductRepository
-from models.product_value import ProductValue
+from Backend.repositories.product_value_repository import ProductValueRepository
+from Backend.repositories.product_repository import ProductRepository
+from Backend.models.product_value import ProductValue
 from typing import List
 
 

@@ -1,10 +1,10 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
-from models.sale import Sale
-from models.item_sale import SaleItem
-from models.product import Product
+from Backend.models.sale import Sale
+from Backend.models.item_sale import SaleItem
+from Backend.models.product import Product
 from datetime import datetime
-from repositories.repository_base import RepositoryBase
+from Backend.repositories.repository_base import RepositoryBase
 from typing import List
 
 

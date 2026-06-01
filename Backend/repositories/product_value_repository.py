@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
-from models.product_value import ProductValue
-from repositories.repository_base import RepositoryBase
+from Backend.models.product_value import ProductValue
+from Backend.repositories.repository_base import RepositoryBase
 from typing import List
 
 class ProductValueRepository(RepositoryBase[ProductValue]):
