@@ -10,6 +10,7 @@ from Backend.dependencies import get_product_service, get_sale_service, get_cate
 from typing import Optional
 from sqlalchemy.orm import Session
 from Backend.agent.model_value_extractor import value_extractor
+from Backend.agent.model_create_categories import create_categories
 from Backend.models.category import Category
 from Backend.models.value import Value
 
@@ -57,6 +58,13 @@ def create(data: ProductInput, service: ProductService = Depends(get_product_ser
         productCreate = service.create(data.barcode, data.name, data.price, data.description)
 
         categories = service_category.get_all()
+
+        created_categories = create_categories(
+            nombre=data.name,
+            descripcion=data.description,
+            proveedor=None,
+            categoria=categories
+        )
     
             # 2. Extraer atributos con IA
         result = value_extractor(
