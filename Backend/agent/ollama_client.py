@@ -89,3 +89,10 @@ def get_general_consultant():
         model="general-consultant",
         base_url=OLLAMA_BASE_URL
     )
+
+
+def create_categories_by_products(): 
+    return OllamaLLM(
+        model="create-categories-by-products",
+        base_url=OLLAMA_BASE_URL
+    )

@@ -66,6 +66,8 @@ def create(data: ProductInput, service: ProductService = Depends(get_product_ser
             categoria=categories
         )
 
+        print(result)
+
         # 3. Persistir en BD
         values = result.get("atributos", [])
         for val in values:

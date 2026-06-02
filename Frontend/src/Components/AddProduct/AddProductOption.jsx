@@ -11,6 +11,7 @@ function AddProductOption() {
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [description, setDescription] = useState("");
+  const [proveedor, setProveedor] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [errors, setErrors] = useState({});
@@ -18,13 +19,20 @@ function AddProductOption() {
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    console.log("Datos a enviar:", { barcode, name, price, description });
+    console.log("Datos a enviar:", {
+      barcode,
+      name,
+      price,
+      description,
+      proveedor,
+    });
 
     const form = {
       barcode: barcode,
       name: name,
       price: price,
       description: description,
+      proveedor: proveedor,
     };
 
     console.log("FORMULARIO POR ENVIARSE A LAS VALIDACIONES");
@@ -43,6 +51,7 @@ function AddProductOption() {
     if (Object.keys(errors).length === 0) {
       console.log("ENTRANDO A MANDAR LOS PRODUCTOS");
       try {
+        console.log("MANDANDO DATOS PARA CREAR PRODUCTO");
         const response = await axios.post(`${BASE_URL}/api/products/`, {
           barcode,
           name,
@@ -127,6 +136,16 @@ function AddProductOption() {
             {errors.description && (
               <p className="error">* debe ingresar la descripción</p>
             )}
+          </div>
+          <div className="container-label">
+            <label className="label-add-product">
+              Proveedor
+              <input
+                value={proveedor}
+                onChange={(e) => setProveedor(e.target.value)}
+                placeholder="Opcional"
+              />
+            </label>
           </div>
         </div>
         <button className="button" type="submit">

@@ -33,8 +33,8 @@ class ValueService:
         response = self.repo.create(value)
 
         return {
-    "success": True,
-    "value": {
+        "success": True,
+        "value": {
         "id": response.id,
         "name": response.value,
         "created_at": response.created_at
