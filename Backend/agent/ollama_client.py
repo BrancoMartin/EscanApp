@@ -35,32 +35,32 @@ def get_create_product():
         base_url=OLLAMA_BASE_URL
     )
 
-#VALUE EXTRACTOR
-#ESTE SE GENERA CUANDO SE CREA UN PRODUCTO Y ES PARA QUE DETECTE LOS VALUES INGRESADOS Y 
-# GENERE LA CATEGORIA Y EL VALOR
-def get_value_extractor():
+#ATTRIBUTE EXTRACTOR
+#ESTE SE GENERA CUANDO SE CREA UN PRODUCTO Y ES PARA QUE DETECTE LOS ATRIBUTOS INGRESADOS Y 
+# GENERE LA CATEGORIA Y EL ATRIBUTO
+def get_attribute_extractor():
     return OllamaLLM(
-        model="value-extractor", 
+        model="attribute-extractor", 
         base_url=OLLAMA_BASE_URL
     )
 
-#VALUE CLASSIFIQUER
-#ESTE SE EJECUTA CUANDO EL USUARIO QUIERE AUMENTAR ALGO EL MODELO DEVUELVE EL VALOR, Y LA CATEGORIA PARA POSTERIORMENTE HACER EL AUMENTO
+#ATTRIBUTE CLASSIFIQUER
+#ESTE SE EJECUTA CUANDO EL USUARIO QUIERE AUMENTAR ALGO EL MODELO DEVUELVE EL ATRIBUTO, Y LA CATEGORIA PARA POSTERIORMENTE HACER EL AUMENTO
 
-def get_value_classifier():
+def get_attribute_classifier():
     return OllamaLLM(
-        model="value-classifier", 
+        model="attribute-classifier", 
         base_url=OLLAMA_BASE_URL
     )
 
 
-# VALUE RESOLVER 
-# ESTE SE PODRIA USAR CUANDO CREAMOS UN VALUE, EJEMPLO "PLASTICO" Y LUEGO LE PASAMOS LOS PRODUCTOS Y CATEGORIAS PARA 
-# QUE DETERMINE QUE PRODUCTOS POSEEN ESE VALOR Y A QUE CATEGORIA PERTENECE ESE VALUE
-# o también se podria crear en el caso de que ya tengamos creados productos y categorias en la db y querramos pasarselo a este modelo para que determine que productos poseen ese value y a que categoria pertenece ese value
-def get_value_resolver():
+# ATTRIBUTE RESOLVER 
+# ESTE SE PODRIA USAR CUANDO CREAMOS UN ATRIBUTO, EJEMPLO "PLASTICO" Y LUEGO LE PASAMOS LOS PRODUCTOS Y CATEGORIAS PARA 
+# QUE DETERMINE QUE PRODUCTOS POSEEN ESE ATRIBUTO Y A QUE CATEGORIA PERTENECE ESE ATRIBUTO
+# o también se podria crear en el caso de que ya tengamos creados productos y categorias en la db y querramos pasarselo a este modelo para que determine que productos poseen ese atributo y a que categoria pertenece ese atributo
+def get_attribute_resolver():
     return OllamaLLM(
-        model="value-resolver",
+        model="attribute-resolver",
         base_url=OLLAMA_BASE_URL
     )
 
@@ -75,7 +75,7 @@ def get_incomplete_handler():
 
 
 # INCREASE DETECTOR
-# DETECTA EL TIPO DE AUMENTO QUE EL USUARIO QUIERE HACER OSEA todos, por valor, por producto
+# DETECTA EL TIPO DE AUMENTO QUE EL USUARIO QUIERE HACER OSEA todos, por atributo, por producto
 def get_increase_detector():
     return OllamaLLM(
         model="increase-detector",

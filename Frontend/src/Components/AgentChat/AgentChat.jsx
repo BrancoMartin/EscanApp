@@ -51,13 +51,13 @@ function AgentChat({ onClose }) {
 
         if (cats.length > 0) {
           const randomCat = cats[Math.floor(Math.random() * cats.length)];
-          const valResp = await axios.get(
-            `${BASE_URL}/api/values?category_id=${randomCat.id}`,
+          const attrResp = await axios.get(
+            `${BASE_URL}/api/attributes?category_id=${randomCat.id}`,
           );
-          const vals = valResp.data || [];
-          if (vals.length > 0) {
-            const randomVal = vals[Math.floor(Math.random() * vals.length)];
-            examples.push(`"Aumentame los de ${randomVal.value} un 20%"`);
+          const attrs = attrResp.data || [];
+          if (attrs.length > 0) {
+            const randomAttr = attrs[Math.floor(Math.random() * attrs.length)];
+            examples.push(`"Aumentame los de ${randomAttr.name} un 20%"`);
           }
         }
 

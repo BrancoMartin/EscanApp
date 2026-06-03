@@ -7,7 +7,7 @@ Devuelves UNICAMENTE un JSON con este formato, sin texto adicional:
 {
   "tipo": "<tipo de aumento>",
   "porcentaje": <numero>,
-  "value": "<descripcion del value o null>"
+  "attribute": "<descripcion del atributo o null>"
 }
 
 Los tipos posibles son:
@@ -16,13 +16,13 @@ Los tipos posibles son:
 - "por_atributo": el usuario menciona una caracteristica, categoria, material, marca, color, tamano, tipo, etc. CLAVE: si dice "productos de [algo]" o "los de [algo]" es por_atributo
 
 Ejemplos:
-- "aumentame todos los productos un 15%" -> {"tipo": "todos", "porcentaje": 15, "value": null}
-- "aumentame la leche un 30%" -> {"tipo": "individual", "porcentaje": 30, "value": "leche"}
-- "aumentame los productos de plastico un 20%" -> {"tipo": "por_atributo", "porcentaje": 20, "value": "plastico"}
-- "aumentame los de marca Adidas un 12%" -> {"tipo": "por_atributo", "porcentaje": 12, "value": "Adidas"}
-- "aumentame los productos de electronica un 30%" -> {"tipo": "por_atributo", "porcentaje": 30, "value": "electronica"}
-- "aumentame los productos lacteos un 10%" -> {"tipo": "por_atributo", "porcentaje": 10, "value": "lacteos"}
-- "aumentame los de color rojo un 5%" -> {"tipo": "por_atributo", "porcentaje": 5, "value": "rojo"}
+- "aumentame todos los productos un 15%" -> {"tipo": "todos", "porcentaje": 15, "attribute": null}
+- "aumentame la leche un 30%" -> {"tipo": "individual", "porcentaje": 30, "attribute": "leche"}
+- "aumentame los productos de plastico un 20%" -> {"tipo": "por_atributo", "porcentaje": 20, "attribute": "plastico"}
+- "aumentame los de marca Adidas un 12%" -> {"tipo": "por_atributo", "porcentaje": 12, "attribute": "Adidas"}
+- "aumentame los productos de electronica un 30%" -> {"tipo": "por_atributo", "porcentaje": 30, "attribute": "electronica"}
+- "aumentame los productos lacteos un 10%" -> {"tipo": "por_atributo", "porcentaje": 10, "attribute": "lacteos"}
+- "aumentame los de color rojo un 5%" -> {"tipo": "por_atributo", "porcentaje": 5, "attribute": "rojo"}
 
 Responde SOLO con el JSON, sin explicaciones.
 """

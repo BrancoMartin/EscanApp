@@ -20,11 +20,11 @@ REGLAS:
 - No inventás ni copiás valores de otros productos
 
 FORMATO:
-{"atributos": [{"categoria": "...", "valor": "..."}]}
+[{"categoria": "...", "valor": "..."}]
 
 EJEMPLO:
 nombre="Balde rojo 10L", descripcion="plastico resistente", proveedor=""
-{"atributos": [{"categoria": "color", "valor": "rojo"}, {"categoria": "capacidad", "valor": "10L"}, {"categoria": "material", "valor": "plastico"}]}
+[{"categoria": "color", "valor": "rojo"}, {"categoria": "capacidad", "valor": "10L"}, {"categoria": "material", "valor": "plastico"}]
 """
 
 PARAMETER temperature 0

@@ -15,6 +15,6 @@ class Product(Base):
 
     sale_items = relationship("SaleItem", back_populates="product")
 
-    product_values = relationship("ProductValue", back_populates="product")
+    product_attributes = relationship("ProductAttribute", back_populates="product")
 
     

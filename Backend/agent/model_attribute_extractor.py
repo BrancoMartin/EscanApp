@@ -1,20 +1,23 @@
+
 import json
 from langchain_core.prompts import PromptTemplate
-from .ollama_client import create_categories_by_products
+from .ollama_client import get_attribute_extractor
 
-def create_categories(nombre, descripcion, proveedor):
-    llm = create_categories_by_products()
+
+def attribute_extractor(nombre, descripcion, categoria, proveedor):
+    llm = get_attribute_extractor()
 
     template = """
 nombre: {nombre}
 descripcion: {descripcion}
 proveedor: {proveedor}
+categorias_existentes: {categoria}
 
-Crea categorias de atributo de ESTE producto específico.
+Extraé los atributos de ESTE producto específico.
 """
 
     prompt = PromptTemplate(
-        input_variables=["nombre", "descripcion", "proveedor"],
+        input_variables=["nombre", "descripcion", "proveedor", "categoria"],
         template=template
     )
 
@@ -24,14 +27,14 @@ Crea categorias de atributo de ESTE producto específico.
         response = chain.invoke({
             "nombre": nombre,
             "descripcion": descripcion,
-            "proveedor": proveedor
+            "proveedor": proveedor,
+            "categoria": categoria
         })
 
         content = response.strip()
         clean = content.replace("```json", "").replace("```", "").strip()
         data = json.loads(clean)
         return data
-
     except Exception as e:
-        print(f"[create_categories] Error: {e}")
-        return {"categorias_nuevas": []}
+        print(f"[attribute_extractor] Error: {e}")
+        return []

@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from Backend.database import get_db
 from Backend.models.category import Category
-from Backend.models.value import Value
+from Backend.models.attribute import Attribute
 
 router = APIRouter()
 
@@ -12,9 +12,9 @@ class CategoryInput(BaseModel):
     name: str
 
 
-class ValueInput(BaseModel):
+class AttributeInput(BaseModel):
     category_id: int
-    value: str
+    name: str
 
 
 @router.get("/categories")
@@ -40,38 +40,34 @@ def delete_category(category_id: int, db: Session = Depends(get_db)):
     cat = db.query(Category).filter(Category.id == category_id).first()
     if not cat:
         raise HTTPException(status_code=404, detail="Categoria no encontrada")
-    db.query(Value).filter(Value.category_id == category_id).delete()
+    db.query(Attribute).filter(Attribute.category_id == category_id).delete()
     db.delete(cat)
     db.commit()
     return {"message": "Categoria eliminada"}
 
 
-@router.get("/values")
-def get_values(category_id: int = Query(None), db: Session = Depends(get_db)):
-    q = db.query(Value)
+@router.get("/attributes")
+def get_attributes(category_id: int = Query(None), db: Session = Depends(get_db)):
+    q = db.query(Attribute)
     if category_id:
-        q = q.filter(Value.category_id == category_id)
-    vals = q.all()
-    return [{"id": v.id, "category_id": v.category_id, "value": v.value, "created_at": v.created_at.isoformat() if v.created_at else None} for v in vals]
+        q = q.filter(Attribute.category_id == category_id)
+    attrs = q.all()
+    return [{"id": a.id, "category_id": a.category_id, "name": a.name, "created_at": a.created_at.isoformat() if a.created_at else None} for a in attrs]
 
 
-@router.post("/values")
-def create_value(data: ValueInput, db: Session = Depends(get_db)):
+@router.post("/attributes")
+def create_attribute(data: AttributeInput, db: Session = Depends(get_db)):
     cat = db.query(Category).filter(Category.id == data.category_id).first()
     if not cat:
         raise HTTPException(status_code=404, detail="Categoria no encontrada")
-    existing = db.query(Value).filter(
-        Value.category_id == data.category_id,
-        Value.value == data.value
+    existing = db.query(Attribute).filter(
+        Attribute.category_id == data.category_id,
+        Attribute.name == data.name
     ).first()
     if existing:
-        raise HTTPException(status_code=400, detail=f"El valor '{data.value}' ya existe en esta categoria")
-    av = Value(category_id=data.category_id, value=data.value)
+        raise HTTPException(status_code=400, detail=f"El atributo '{data.name}' ya existe en esta categoria")
+    av = Attribute(category_id=data.category_id, name=data.name)
     db.add(av)
     db.commit()
     db.refresh(av)
-    return {"id": av.id, "category_id": av.category_id, "value": av.value, "created_at": av.created_at.isoformat() if av.created_at else None}
-
-
-
-
+    return {"id": av.id, "category_id": av.category_id, "name": av.name, "created_at": av.created_at.isoformat() if av.created_at else None}

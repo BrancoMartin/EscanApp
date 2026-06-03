@@ -1,9 +1,9 @@
 import json
 from langchain_core.prompts import PromptTemplate
-from .ollama_client import get_value_resolver
+from .ollama_client import get_attribute_resolver
 
 
-def resolve_value_in_db(categoria: str, valor: str, categoria_existe: bool, productos: list) -> dict:
+def resolve_attribute_in_db(categoria: str, valor: str, categoria_existe: bool, productos: list) -> dict:
     if not productos:
         prod_str = "No hay productos disponibles."
     else:
@@ -15,7 +15,7 @@ def resolve_value_in_db(categoria: str, valor: str, categoria_existe: bool, prod
             lines.append(f"ID: {p_id} | Nombre: {p_name} | Descripcion: {p_desc}")
         prod_str = "\n".join(lines)
 
-    llm = get_value_resolver()
+    llm = get_attribute_resolver()
 
     template = "Atributo buscado: categoria \"{categoria}\", valor \"{valor}\"\n\nLista de productos disponibles:\n{productos}"
 

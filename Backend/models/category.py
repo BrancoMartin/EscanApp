@@ -12,4 +12,4 @@ class Category(Base):
     name = Column(String, unique=True, nullable=False, index=True)
     created_at = Column(DateTime, default=datetime.now)
 
-    values = relationship("Value", back_populates="category")
+    attributes = relationship("Attribute", back_populates="category")

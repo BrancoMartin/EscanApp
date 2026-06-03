@@ -3,8 +3,8 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from Backend.database import get_db
 from Backend.models.category import Category
-from Backend.models.value import Value
-from Backend.models.product_value import ProductValue
+from Backend.models.attribute import Attribute
+from Backend.models.product_attribute import ProductAttribute
 from Backend.models.product import Product
 from dotenv import load_dotenv
 import os
@@ -14,7 +14,7 @@ from Backend.agent.model1_intent import detect_intent
 from Backend.agent.model2a_create_product import create_product_with_attributes
 from Backend.agent.model2b_price_type import detect_price_increase_type
 from Backend.agent.model3_detect_attr import detect_category_and_value
-from Backend.agent.model4_resolve_attr import resolve_value_in_db
+from Backend.agent.model4_resolve_attr import resolve_attribute_in_db
 from Backend.agent.model5_incomplete import handle_incomplete_info
 from Backend.agent.model6_general import handle_general_query
 
@@ -63,7 +63,7 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
             price_type_result = detect_price_increase_type(user_message)
             tipo = price_type_result.get("tipo")
             porcentaje = price_type_result.get("porcentaje")
-            value = price_type_result.get("value")
+            attribute = price_type_result.get("attribute")
 
             if not tipo or not porcentaje:
                 return AgentResponse(
@@ -85,10 +85,10 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
                 )
 
             elif tipo == "individual":
-                products = db.query(Product).filter(Product.name.ilike(f"%{value}%")).all()
+                products = db.query(Product).filter(Product.name.ilike(f"%{attribute}%")).all()
                 if not products:
                     return AgentResponse(
-                        message=f"No encontre ningun producto que se llame '{value}'.",
+                        message=f"No encontre ningun producto que se llame '{attribute}'.",
                         action_executed="aumentar_precios",
                         success=False
                     )
@@ -107,14 +107,14 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
                 cats = db.query(Category).all()
                 existing_categories = [{"id": c.id, "name": c.name} for c in cats]
 
-                category_and_value = detect_category_and_value(value, existing_categories)
+                category_and_value = detect_category_and_value(attribute, existing_categories)
                 categoria_inf = category_and_value.get("categoria_inferida")
                 valor = category_and_value.get("valor")
                 categoria_existe = category_and_value.get("categoria_existe", False)
 
                 if not categoria_inf:
                     return AgentResponse(
-                        message=f"No pude determinar a que categoria pertenece '{value}'.",
+                        message=f"No pude determinar a que categoria pertenece '{attribute}'.",
                         action_executed="aumentar_precios",
                         success=False
                     )
@@ -132,21 +132,21 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
                     db.commit()
                     db.refresh(cat)
 
-                value = db.query(Value).filter(
-                    Value.category_id == cat.id,
-                    Value.value == valor
+                attribute = db.query(Attribute).filter(
+                    Attribute.category_id == cat.id,
+                    Attribute.name == valor
                 ).first()
-                # creamos la value si no existe por las dudas pero deberia existir ya que deberia ser la que ingresa el usuario
-                if not value:
-                    value = Value(category_id=cat.id, value=valor)
-                    db.add(value)
+                # creamos el attribute si no existe por las dudas pero deberia existir ya que deberia ser la que ingresa el usuario
+                if not attribute:
+                    attribute = Attribute(category_id=cat.id, name=valor)
+                    db.add(attribute)
                     db.commit()
-                    db.refresh(value)
+                    db.refresh(attribute)
 
-                product_values = db.query(ProductValue).filter(
-                    ProductValue.value_id == value.id
+                product_attributes = db.query(ProductAttribute).filter(
+                    ProductAttribute.attribute_id == attribute.id
                 ).all()
-                product_ids = [b.product_id for b in product_values]
+                product_ids = [b.product_id for b in product_attributes]
 
                 if product_ids:
                     products = db.query(Product).filter(Product.id.in_(product_ids)).all()
@@ -157,7 +157,7 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
                         message=f"Se aumento un {porcentaje}% a {len(products)} producto(s) con {categoria_inf} = {valor}",
                         action_executed="aumentar_precios",
                         success=True,
-                        data={"updated_products": len(products), "category": categoria_inf, "value": valor, "percentage": porcentaje}
+                        data={"updated_products": len(products), "category": categoria_inf, "attribute": valor, "percentage": porcentaje}
                     )
                 else:
                     all_products = db.query(Product).all()
@@ -165,13 +165,13 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
                         {"id": p.id, "name": p.name, "description": p.description or "", "price": p.price}
                         for p in all_products
                     ]
-                    resolve_result = resolve_value_in_db(categoria_inf, valor, categoria_existe, productos_list)
+                    resolve_result = resolve_attribute_in_db(categoria_inf, valor, categoria_existe, productos_list)
                     if resolve_result.get("puede_inferir"):
                         detected_ids = resolve_result.get("productos_detectados", [])
                         if detected_ids:
                             products = db.query(Product).filter(Product.id.in_(detected_ids)).all()
                             for p in products:
-                                bridge = ProductValue(product_id=p.id, value_id=value.id)
+                                bridge = ProductAttribute(product_id=p.id, attribute_id=attribute.id)
                                 db.add(bridge)
                                 p.price = round(p.price * (1 + porcentaje / 100), 2)
                             db.commit()
@@ -179,7 +179,7 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
                                 message=f"Se aumento un {porcentaje}% a {len(products)} producto(s) con {categoria_inf} = {valor}",
                                 action_executed="aumentar_precios",
                                 success=True,
-                                data={"updated_products": len(products), "category": categoria_inf, "value": valor, "percentage": porcentaje}
+                                data={"updated_products": len(products), "category": categoria_inf, "attribute": valor, "percentage": porcentaje}
                             )
                     return AgentResponse(
                         message=resolve_result.get("mensaje_usuario", f"No pude determinar que productos tienen {categoria_inf} = {valor}. ¿Podes indicarmelo?"),
@@ -263,16 +263,16 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
                             db.add(ac)
                             db.commit()
                             db.refresh(ac)
-                        av = db.query(Value).filter(
-                            Value.category_id == ac.id,
-                            Value.value == val
+                        av = db.query(Attribute).filter(
+                            Attribute.category_id == ac.id,
+                            Attribute.name == val
                         ).first()
                         if not av:
-                            av = Value(category_id=ac.id, value=val)
+                            av = Attribute(category_id=ac.id, name=val)
                             db.add(av)
                             db.commit()
                             db.refresh(av)
-                        bridge = ProductValue(product_id=product.id, value_id=av.id)
+                        bridge = ProductAttribute(product_id=product.id, attribute_id=av.id)
                         db.add(bridge)
                 db.commit()
 
@@ -295,11 +295,11 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
         elif intent == "listar_categorias":
             cats = db.query(Category).all()
             if cats:
-                lines = ["**Categorias y valores disponibles:**\n"]
+                lines = ["**Categorias y atributos disponibles:**\n"]
                 for c in cats:
-                    values = db.query(Value).filter(Value.category_id == c.id).all()
-                    vals_str = ", ".join([v.value for v in values]) if values else "sin valores"
-                    lines.append(f"  - {c.name}: {vals_str}")
+                    attributes = db.query(Attribute).filter(Attribute.category_id == c.id).all()
+                    attrs_str = ", ".join([a.name for a in attributes]) if attributes else "sin atributos"
+                    lines.append(f"  - {c.name}: {attrs_str}")
                 return AgentResponse(
                     message="\n".join(lines),
                     action_executed="listar_categorias",
@@ -327,21 +327,21 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
                         db.add(ac)
                         db.commit()
                         db.refresh(ac)
-                    av = db.query(Value).filter(
-                        Value.category_id == ac.id,
-                        Value.value == val
+                    av = db.query(Attribute).filter(
+                        Attribute.category_id == ac.id,
+                        Attribute.name == val
                     ).first()
                     if not av:
-                        av = Value(category_id=ac.id, value=val)
+                        av = Attribute(category_id=ac.id, name=val)
                         db.add(av)
                         db.commit()
                     return AgentResponse(
-                        message=f"Valor '{val}' agregado a categoria '{cat_name}'.",
+                        message=f"Atributo '{val}' agregado a categoria '{cat_name}'.",
                         action_executed="agregar_atributo",
                         success=True
                     )
             return AgentResponse(
-                message="No entendi que valor y categoria queres agregar.",
+                message="No entendi que atributo y categoria queres agregar.",
                 action_executed="agregar_atributo",
                 success=False
             )
@@ -358,7 +358,7 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
 
         else:
             total_products = db.query(Product).count()
-            bridge_count = db.query(ProductValue).count()
+            bridge_count = db.query(ProductAttribute).count()
             avg_price = db.query(Product).with_entities(db.func.avg(Product.price)).scalar()
             min_price = db.query(Product).with_entities(db.func.min(Product.price)).scalar()
             max_price = db.query(Product).with_entities(db.func.max(Product.price)).scalar()
@@ -366,8 +366,8 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
             cats = db.query(Category).all()
             cat_stats = {}
             for c in cats:
-                val_count = db.query(Value).filter(Value.category_id == c.id).count()
-                cat_stats[c.name] = val_count
+                attr_count = db.query(Attribute).filter(Attribute.category_id == c.id).count()
+                cat_stats[c.name] = attr_count
 
             db_stats = {
                 "total_productos": total_products,

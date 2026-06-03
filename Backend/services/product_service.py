@@ -87,8 +87,8 @@ class ProductService:
 
         return products
     
-    def get_product_by_value(self, id_value):
-        products = self.repo.get_product_by_value(id_value)
+    def get_product_by_attribute(self, attribute_id):
+        products = self.repo.get_product_by_attribute(attribute_id)
 
         if not products: 
             raise FileNotFoundError("no se encontraron productos")

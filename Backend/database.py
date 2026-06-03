@@ -29,8 +29,8 @@ def init_db():
     # crea las tablas en la base de datos si no existen
     from Backend.models import product, sale, item_sale
     from Backend.models.category import Category
-    from Backend.models.value import Value
-    from Backend.models.product_value import ProductValue
+    from Backend.models.attribute import Attribute
+    from Backend.models.product_attribute import ProductAttribute
     Base.metadata.create_all(bind=engine)
 
 def get_db():

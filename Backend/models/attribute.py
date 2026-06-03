@@ -3,18 +3,18 @@ from sqlalchemy.orm import relationship
 from Backend.database import Base
 from datetime import datetime
 
-class Value(Base):
-    __tablename__ = "values"
+class Attribute(Base):
+    __tablename__ = "attributes"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    value = Column(String, nullable=False)
+    name = Column(String, nullable=False)
     category_id = Column(Integer, ForeignKey("categories.id"), nullable=True)  
     amount_products = Column(Integer, nullable=True, default=0)
     created_at = Column(DateTime, default=datetime.now)
 
     __table_args__ = (
-        UniqueConstraint("category_id", "value", name="uq_category_value"),
+        UniqueConstraint("category_id", "name", name="uq_category_attribute"),
     )
 
-    category = relationship("Category", back_populates="values")
-    product_values = relationship("ProductValue", back_populates="value")
+    category = relationship("Category", back_populates="attributes")
+    product_attributes = relationship("ProductAttribute", back_populates="attribute")

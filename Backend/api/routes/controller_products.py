@@ -3,16 +3,16 @@ from pydantic import BaseModel
 from Backend.services.category_service import CategoryService
 from Backend.services.product_service import ProductService
 from Backend.services.sale_service import SaleService
-from Backend.models.product_value import ProductValue
-from Backend.services.value_service import ValueService
-from Backend.services.product_value_service import ProductValueService
-from Backend.dependencies import get_product_service, get_sale_service, get_category_service, get_value_service, get_product_value_service
+from Backend.models.product_attribute import ProductAttribute
+from Backend.services.attribute_service import AttributeService
+from Backend.services.product_attribute_service import ProductAttributeService
+from Backend.dependencies import get_product_service, get_sale_service, get_category_service, get_attribute_service, get_product_attribute_service
 from typing import Optional
 from sqlalchemy.orm import Session
-from Backend.agent.model_value_extractor import value_extractor
+from Backend.agent.model_attribute_extractor import attribute_extractor
 from Backend.agent.model_create_categories import create_categories
 from Backend.models.category import Category
-from Backend.models.value import Value
+from Backend.models.attribute import Attribute
 
 router = APIRouter()
 
@@ -39,20 +39,20 @@ def get_by_barcode(
         raise HTTPException(status_code=404, detail="Producto no encontrado")
     return result
 
-def assign_attribute_to_product(db: Session, product_id: int, value_id: int):
-    exists = db.query(ProductValue).filter_by(
+def assign_attribute_to_product(db: Session, product_id: int, attribute_id: int):
+    exists = db.query(ProductAttribute).filter_by(
         product_id=product_id,
-        value_id=value_id
+        attribute_id=attribute_id
     ).first()
     if not exists:
-        pa = ProductValue(product_id=product_id, value_id=value_id)
+        pa = ProductAttribute(product_id=product_id, attribute_id=attribute_id)
         db.add(pa)
         db.commit()
 
 # Create product
 @router.post("/")
 def create(data: ProductInput, service: ProductService = Depends(get_product_service), service_category: CategoryService = Depends(get_category_service),
-           service_value: ValueService = Depends(get_value_service),  service_product_value: ProductValueService = Depends(get_product_value_service)):
+           service_attribute: AttributeService = Depends(get_attribute_service),  service_product_attribute: ProductAttributeService = Depends(get_product_attribute_service)):
     try:
         print("Intentando crear producto con datos:", data)
         productCreate = service.create(data.barcode, data.name, data.price, data.description)
@@ -62,27 +62,42 @@ def create(data: ProductInput, service: ProductService = Depends(get_product_ser
         created_categories = create_categories(
             nombre=data.name,
             descripcion=data.description,
-            proveedor=None,
-            categoria=categories
+            proveedor=None
         )
+
+        print("created_categories:", created_categories)
+
+        categorias_nuevas = created_categories.get("categorias_nuevas", [])
+        for cat_name in categorias_nuevas:
+            cat = service_category.get_or_create_category(cat_name)
+            print(f"Categoria creada: {cat.name} (id={cat.id})")
+
+        categories = service_category.get_all()
     
-            # 2. Extraer atributos con IA
-        result = value_extractor(
+        # 2. Extraer atributos con IA
+        result = attribute_extractor(
             nombre=data.name,
             descripcion=data.description,
             proveedor=None,
             categoria=categories
         )
 
-        print(result)
+        print("attribute_extractor result:", result)
 
         # 3. Persistir en BD
-        values = result.get("atributos", [])
-        for val in values:
-            category = service_category.get_or_create_category(val["categoria"])
-            value_obj = service_value.get_or_create_value(category.id, val["valor"])
+        attributes = result if isinstance(result, list) else result.get("atributos", [])
+        for attr in attributes:
+            category = service_category.get_by_name(attr["categoria"])
+            if not category:
+                print(f"ERROR: Categoria '{attr['categoria']}' no encontrada")
+                continue
+            attribute_obj = service_attribute.get_or_create_attribute(category.id, attr["valor"])
             product = service.get_by_name(data.name)
-            product_value = service_product_value.get_or_create(product.id, value_obj.id)
+            product_attribute = service_product_attribute.get_or_create(product.id, attribute_obj.id)
+            if not product_attribute:
+                print(f"ERROR: No se pudo asignar atributo '{attr['valor']}' al producto '{product.name}'")
+            else:
+                print(f"Atributo '{attr['valor']}' asignado al producto '{product.name}'")
 
         return productCreate
 
@@ -111,4 +126,3 @@ def delete(product_id: int, service: ProductService = Depends(get_product_servic
 def get_products_by_attribute(attribute_id: int, service: ProductService = Depends(get_product_service)):
     result = service.get_products_by_attribute(attribute_id)
     return {"message": result}
-
