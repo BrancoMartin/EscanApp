@@ -11,6 +11,8 @@ class ProductAttributeRepository(RepositoryBase[ProductAttribute]):
         self.db = db
 
 
-    def get_by_ids(self, product_id, attribute_id): 
-
-        return self.db.query(ProductAttribute).filter(ProductAttribute.product_id == product_id, ProductAttribute.attribute_id == attribute_id)
+    def get_by_ids(self, product_id, attribute_id):
+        return self.db.query(ProductAttribute).filter(
+            ProductAttribute.product_id == product_id,
+            ProductAttribute.attribute_id == attribute_id
+        ).first()
