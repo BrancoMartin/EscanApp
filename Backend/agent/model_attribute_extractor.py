@@ -6,8 +6,6 @@ from .ollama_client import get_attribute_extractor
 def attribute_extractor(nombre, descripcion, categoria, proveedor):
     llm = get_attribute_extractor()
 
-    # El system prompt completo vive en el Modelfile.
-    # Acá solo se pasan los datos para minimizar tokens por request.
     template = """nombre: {nombre}
 descripcion: {descripcion}
 proveedor: {proveedor}

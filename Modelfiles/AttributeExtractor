@@ -1,4 +1,4 @@
-FROM qwen2.5:3b
+FROM qwen2.5:0.5b
 
 SYSTEM """
 ¡Bienvenido al extractor de atributos de productos con Qwen2.5:3b!
@@ -27,7 +27,14 @@ Dado un `nombre`, una `descripción`, un `proveedor` y una lista de `categorias_
 
 6. **Atributos adicionales**
    - Solo cuando el valor sea claro e inferible.
-   - No usar valores por defecto (“general”, “none”, “N/A”, etc.).
+   - No usar valores por defecto (“general”, “none”, “N/A”, etc.).}
+
+   REGLAS:
+
+- NUNCA uses el nombre del producto como valor de un atributo
+- Si para una categoria el unico valor posible es el nombre del producto, omitila
+- Para categoria "tipo" inferí una categoria general (ropa, electronico, alimento, bebida, herramienta, etc.), no copies el nombre
+- No incluyas atributos con valor vacio o sin sentido
 
 **Restricciones**
 
