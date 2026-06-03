@@ -73,19 +73,21 @@ def create(data: ProductInput, service: ProductService = Depends(get_product_ser
             print(f"Categoria creada: {cat.name} (id={cat.id})")
 
         categories = service_category.get_all()
-    
+        category_names = [cat.name for cat in categories]
+
         # 2. Extraer atributos con IA
         result = attribute_extractor(
             nombre=data.name,
             descripcion=data.description,
             proveedor=None,
-            categoria=categories
+            categoria=category_names
         )
 
         print("attribute_extractor result:", result)
 
         # 3. Persistir en BD
         attributes = result if isinstance(result, list) else result.get("atributos", [])
+        print("ATTRIBUTOS", attributes)
         for attr in attributes:
             category = service_category.get_by_name(attr["categoria"])
             if not category:
