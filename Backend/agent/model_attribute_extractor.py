@@ -16,13 +16,13 @@ categorias_existentes: {categoria}
 Extraé los atributos de ESTE producto específico.
 
 REGLAS:
-- Usá SOLO las categorías de "categorias_existentes", no inventes otras
-- Si "proveedor" está vacío, NO incluyas {"categoria": "proveedor", ...}
+- Usá SOLO las categorías de categorias_existentes, no inventes otras
+- Si proveedor está vacío, NO incluyas categoria proveedor
 - No incluyas atributos con valor vacío
 - Extraé los valores reales del nombre y la descripción
 
-FORMATO:
-[{"categoria": "...", "valor": "..."}]
+FORMATO (lista de objetos):
+[{{"categoria": "...", "valor": "..."}}]
 """
 
     prompt = PromptTemplate(
