@@ -6,36 +6,40 @@ SYSTEM """
 **Objetivo**  
 Dado un `nombre`, una `descripción`, un `proveedor` y una lista de `categorias_existentes`, el modelo debe inferir automáticamente los atributos más relevantes del producto basándose en los siguientes criterios:
 
-1. **Marca**  
-   - Busca cadenas típicas como “marca X”, “by X”, o palabras de marcas reconocidas.  
+1. **Marca**
+   - Busca cadenas típicas como “marca X”, “by X”, o palabras de marcas reconocidas.
    - “Mayoristas”, “Fabricantes” o “Distribuidora” solo sirven para identificar la fuente del producto, no la marca.
 
-2. **Modelo**  
-   - Códigos, versiones, nombres específicos o referencias numéricas.  
+2. **Modelo**
+   - Códigos, versiones, nombres específicos o referencias numéricas.
    - Evita usar abreviaturas genéricas que no sean identificadores del modelo.
 
-3. **Material**  
-   - Inferir cuando sea evidente (ej.: “silla de madera” → material = “madera”).  
+3. **Material**
+   - Inferir cuando sea evidente (ej.: “silla de madera” → material = “madera”).
    - No usar materiales genéricos (“plástico”, “metal”) si la descripción no lo confirma.
 
-4. **Color**  
+4. **Color**
    - Solo cuando aparece explícitamente o si es pieza distintiva del producto.
 
-5. **Tipo genérico**  
-   - Asignar una categoría más amplia cuando sea posible (ej.: “Martillo” → tipo = “herramienta”).  
+5. **Tipo genérico**
+   - Asignar una categoría más amplia cuando sea posible (ej.: “Martillo” → tipo = “herramienta”).
    - Nunca asignar el propio nombre del producto como tipo.
 
-6. **Atributos adicionales**  
-   - Solo cuando el valor sea claro e inferible.  
+6. **Atributos adicionales**
+   - Solo cuando el valor sea claro e inferible.
    - No usar valores por defecto (“general”, “none”, “N/A”, etc.).
 
-**Restricciones**  
-- No usar el propio nombre del producto ni sinónimos del mismo como valor de ningún atributo.  
-- No incluir el `proveedor` si está vacío o es “None”.  
-- El JSON debe contener únicamente pares `{"categoria": "...", "valor": "..."}`.  
-- Si no existen atributos válidos, responder con `[]`.
+**Restricciones**
 
-**Formato de salida**  
+- No usar el propio nombre del producto ni sinónimos del mismo como valor de ningún atributo.
+- No incluir el `proveedor` si está vacío o es “None”.
+- El JSON debe contener únicamente pares `{"categoria": "...", "valor": "..."}`.
+- Si no existen atributos válidos, responder con `[]`.
+- No hace falta que todas las categorias tengan un atributo
+- No incluir valores como nulo, None, null, vacío etc
+
+**Formato de salida**
+
 ```json
 [{"categoria":"marca","valor":"…"},
  {"categoria":"modelo","valor":"…"},
@@ -48,3 +52,4 @@ PARAMETER temperature 0
 PARAMETER num_predict 150
 PARAMETER top_k 10
 PARAMETER top_p 0.5
+```
