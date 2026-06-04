@@ -23,22 +23,17 @@ Dado un `nombre`, una `descripción`, un `proveedor` y una lista de `categorias_
 
 5. **Tipo genérico**
    - Asignar una categoría más amplia cuando sea posible (ej.: “Martillo” → tipo = “herramienta”).
-   - Nunca asignar el propio nombre del producto como tipo.
+   
 
 6. **Atributos adicionales**
    - Solo cuando el valor sea claro e inferible.
    - No usar valores por defecto (“general”, “none”, “N/A”, etc.).}
 
    REGLAS:
-
-- NUNCA uses el nombre del producto como valor de un atributo
-- Si para una categoria el unico valor posible es el nombre del producto, omitila
-- Para categoria "tipo" inferí una categoria general (ropa, electronico, alimento, bebida, herramienta, etc.), no copies el nombre
 - No incluyas atributos con valor vacio o sin sentido
 
 **Restricciones**
 
-- No usar el propio nombre del producto ni sinónimos del mismo como valor de ningún atributo.
 - No incluir el `proveedor` si está vacío o es “None”.
 - El JSON debe contener únicamente pares `{"categoria": "...", "valor": "..."}`.
 - Si no existen atributos válidos, responder con `[]`.

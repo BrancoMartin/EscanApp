@@ -17,7 +17,7 @@ def resolve_attribute_in_db(categoria: str, valor: str, categoria_existe: bool, 
 
     llm = get_attribute_resolver()
 
-    template = "Atributo buscado: categoria \"{categoria}\", valor \"{valor}\"\n\nLista de productos disponibles:\n{productos}"
+    template = "Buscar: categoria=\"{categoria}\", valor=\"{valor}\"\nProductos:\n{productos}\nJSON:"
 
     prompt = PromptTemplate(
         input_variables=["categoria", "valor", "productos"],

@@ -16,3 +16,6 @@ class AttributeRepository(RepositoryBase[Attribute]):
 
     def get_by_name_and_category_id(self, category_id, name): 
         return self.db.query(Attribute).filter(Attribute.category_id == category_id, Attribute.name == name).first()
+
+    def get_by_name(self, name):
+        return self.db.query(Attribute).filter(Attribute.name == name).first()

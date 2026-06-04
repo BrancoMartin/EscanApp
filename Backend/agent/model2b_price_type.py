@@ -7,10 +7,8 @@ def detect_price_increase_type(user_prompt: str) -> dict:
     
     llm = get_increase_detector()
 
-    template = """
-    {user_prompt}
-    opciones: "todos", "individual", "por_atributo"
-    """
+    template = """{user_prompt}
+JSON:"""
     
     prompt = PromptTemplate(
         input_variables=["user_prompt"],

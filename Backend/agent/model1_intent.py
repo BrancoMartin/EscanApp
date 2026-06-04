@@ -10,20 +10,11 @@ def detect_intent(message: str, conversation_history: list = None, llm=None) -> 
     if conversation_history is None:
         conversation_history = []
     
-    # Construir contexto del historial
-    context = "\n".join([
-        f"Usuario: {msg.get('user', '')}\nAsistente: {msg.get('assistant', '')}"
-        for msg in conversation_history[-4:]  # Últimos 4 mensajes para contexto
-    ])
-    
-    template = """MENSAJE: "{user_message}"
-
-INTENCIONES: crear_categoria, agregar_atributo, aumentar_precios, crear_productos, consulta_general
-
+    template = """{user_message}
 JSON:"""
     
     prompt = PromptTemplate(
-        input_variables=["user_message", "context"],
+        input_variables=["user_message"],
         template=template
     )
     
@@ -31,8 +22,7 @@ JSON:"""
     
     try:
         response = chain.invoke({
-            "user_message": message,
-            "context": context if context else "Conversación nueva"
+            "user_message": message
         })
         
         content = response.strip()

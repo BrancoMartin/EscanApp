@@ -8,7 +8,9 @@ def detect_category_and_value(value: str, existing_categories: list) -> dict:
 
     llm = get_attribute_classifier()
 
-    template = "Atributo: {value}\nCategorias existentes: {categories}"
+    template = """Atributo: {value}
+Categorias: {categories}
+JSON:"""
 
     prompt = PromptTemplate(
         input_variables=["value", "categories"],

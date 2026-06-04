@@ -57,24 +57,37 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
         conversation_history = chat_msg.conversation_history or []
         context = chat_msg.context or {}
 
-        intent = detect_intent(user_message, conversation_history)
+        intent_result = detect_intent(user_message, conversation_history)
+        intent = intent_result.get("intent") if isinstance(intent_result, dict) else intent_result
 
         print(f"[AGENT] Intent: {intent}")
 
         if intent == "aumentar_precios":
+            print("ENTRO EN AUMENTAR_PRECIOS")
+            
             price_type_result = detect_price_increase_type(user_message)
             tipo = price_type_result.get("tipo")
             porcentaje = price_type_result.get("porcentaje")
             attribute = price_type_result.get("attribute")
 
-            if not tipo or not porcentaje:
+            print("RESULTADO DEL DETECT_PRICE_INCREASE_TYPE", price_type_result)
+
+            if not tipo:
                 return AgentResponse(
-                    message="No entendi bien el aumento. ¿Que porcentaje queres aplicar y a que productos?",
+                    message="No entendi bien el aumento. ¿Que productos y porcentaje queres aplicar?",
+                    action_executed="aumentar_precios",
+                    success=False
+                )
+
+            if not porcentaje:
+                return AgentResponse(
+                    message="Ingrese el porcentaje de aumento.",
                     action_executed="aumentar_precios",
                     success=False
                 )
 
             if tipo == "todos":
+                print("ENTRANDO EN AUMENTAR A TODOS")
                 products = db.query(Product).all()
                 for p in products:
                     p.price = round(p.price * (1 + porcentaje / 100), 2)
@@ -87,6 +100,7 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
                 )
 
             elif tipo == "individual":
+                print("ENTRANDO EN AUMENTAR INDIVIDUAL")
                 products = db.query(Product).filter(Product.name.ilike(f"%{attribute}%")).all()
                 if not products:
                     return AgentResponse(
@@ -106,6 +120,7 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
                 )
 
             elif tipo == "por_atributo":
+                print("ENTRANDO A AUMENTAR POR ATRIBUTO", tipo)
                 # Primero buscar el atributo directamente en la DB por nombre
                 attr_record = AttributeService(db).get_by_name(attribute)
 

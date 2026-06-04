@@ -75,6 +75,9 @@ class AttributeService:
     def get_by_name_and_category_id(self, category_id, attribute_name): 
         return self.repo.get_by_name_and_category_id(category_id, attribute_name)
 
+    def get_by_name(self, name):
+        return self.repo.get_by_name(name)
+
     def get_or_create_attribute(self, category_id, attribute_name): 
         existing = self.get_by_name_and_category_id(category_id, attribute_name)
 

@@ -7,7 +7,7 @@ def handle_general_query(user_prompt: str, db_stats: dict) -> str:
 
     llm = get_general_consultant()
 
-    template = "Estadisticas actuales del negocio:\n{stats}\n\nConsulta del usuario: \"{message}\""
+    template = "Estadisticas:\n{stats}\n\nUsuario: {message}"
 
     prompt = PromptTemplate(
         input_variables=["stats", "message"],
