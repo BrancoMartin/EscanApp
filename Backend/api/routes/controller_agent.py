@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
+from sqlalchemy import func as sqlfunc
 from sqlalchemy.orm import Session
 from Backend.database import get_db
 from Backend.models.category import Category
@@ -17,6 +18,7 @@ from Backend.agent.model3_detect_attr import detect_category_and_value
 from Backend.agent.model4_resolve_attr import resolve_attribute_in_db
 from Backend.agent.model5_incomplete import handle_incomplete_info
 from Backend.agent.model6_general import handle_general_query
+from Backend.services.attribute_service import AttributeService
 
 load_dotenv()
 
@@ -104,47 +106,55 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
                 )
 
             elif tipo == "por_atributo":
-                cats = db.query(Category).all()
-                existing_categories = [{"id": c.id, "name": c.name} for c in cats]
+                # Primero buscar el atributo directamente en la DB por nombre
+                attr_record = AttributeService(db).get_by_name(attribute)
 
-                category_and_value = detect_category_and_value(attribute, existing_categories)
-                categoria_inf = category_and_value.get("categoria_inferida")
-                valor = category_and_value.get("valor")
-                categoria_existe = category_and_value.get("categoria_existe", False)
+                if attr_record:
+                    categoria_inf = db.query(Category.name).filter(Category.id == attr_record.category_id).scalar()
+                    valor = attr_record.name
+                    categoria_existe = True
+                    cat = None
+                else:
+                    cats = db.query(Category).all()
+                    existing_categories = [{"id": c.id, "name": c.name} for c in cats]
 
-                if not categoria_inf:
-                    return AgentResponse(
-                        message=f"No pude determinar a que categoria pertenece '{attribute}'.",
-                        action_executed="aumentar_precios",
-                        success=False
-                    )
+                    category_and_value = detect_category_and_value(attribute, existing_categories)
+                    categoria_inf = category_and_value.get("categoria_inferida")
+                    valor = category_and_value.get("valor")
+                    categoria_existe = category_and_value.get("categoria_existe", False)
 
-                if not categoria_existe:
-                    nueva_cat = Category(name=categoria_inf)
-                    db.add(nueva_cat)
-                    db.commit()
-                    db.refresh(nueva_cat)
+                    if not categoria_inf:
+                        return AgentResponse(
+                            message=f"No pude determinar a que categoria pertenece '{attribute}'.",
+                            action_executed="aumentar_precios",
+                            success=False
+                        )
 
-                cat = db.query(Category).filter(Category.name == categoria_inf).first()
-                if not cat:
-                    cat = Category(name=categoria_inf)
-                    db.add(cat)
-                    db.commit()
-                    db.refresh(cat)
+                    if not categoria_existe:
+                        nueva_cat = Category(name=categoria_inf)
+                        db.add(nueva_cat)
+                        db.commit()
+                        db.refresh(nueva_cat)
 
-                attribute = db.query(Attribute).filter(
-                    Attribute.category_id == cat.id,
-                    Attribute.name == valor
-                ).first()
-                # creamos el attribute si no existe por las dudas pero deberia existir ya que deberia ser la que ingresa el usuario
-                if not attribute:
-                    attribute = Attribute(category_id=cat.id, name=valor)
-                    db.add(attribute)
-                    db.commit()
-                    db.refresh(attribute)
+                    cat = db.query(Category).filter(Category.name == categoria_inf).first()
+                    if not cat:
+                        cat = Category(name=categoria_inf)
+                        db.add(cat)
+                        db.commit()
+                        db.refresh(cat)
+
+                    attr_record = db.query(Attribute).filter(
+                        Attribute.category_id == cat.id,
+                        Attribute.name == valor
+                    ).first()
+                    if not attr_record:
+                        attr_record = Attribute(category_id=cat.id, name=valor)
+                        db.add(attr_record)
+                        db.commit()
+                        db.refresh(attr_record)
 
                 product_attributes = db.query(ProductAttribute).filter(
-                    ProductAttribute.attribute_id == attribute.id
+                    ProductAttribute.attribute_id == attr_record.id
                 ).all()
                 product_ids = [b.product_id for b in product_attributes]
 
@@ -171,7 +181,7 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
                         if detected_ids:
                             products = db.query(Product).filter(Product.id.in_(detected_ids)).all()
                             for p in products:
-                                bridge = ProductAttribute(product_id=p.id, attribute_id=attribute.id)
+                                bridge = ProductAttribute(product_id=p.id, attribute_id=attr_record.id)
                                 db.add(bridge)
                                 p.price = round(p.price * (1 + porcentaje / 100), 2)
                             db.commit()
@@ -359,9 +369,9 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
         else:
             total_products = db.query(Product).count()
             bridge_count = db.query(ProductAttribute).count()
-            avg_price = db.query(Product).with_entities(db.func.avg(Product.price)).scalar()
-            min_price = db.query(Product).with_entities(db.func.min(Product.price)).scalar()
-            max_price = db.query(Product).with_entities(db.func.max(Product.price)).scalar()
+            avg_price = db.query(Product).with_entities(sqlfunc.avg(Product.price)).scalar()
+            min_price = db.query(Product).with_entities(sqlfunc.min(Product.price)).scalar()
+            max_price = db.query(Product).with_entities(sqlfunc.max(Product.price)).scalar()
 
             cats = db.query(Category).all()
             cat_stats = {}
