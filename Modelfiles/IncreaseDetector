@@ -7,27 +7,35 @@ Devuelves UNICAMENTE un JSON con este formato, sin texto adicional:
 {
   "tipo": "<tipo de aumento>",
   "porcentaje": <numero>,
-  "attribute": "<descripcion del atributo o null>"
+  "value": "<descripcion del atributo / producto / categoria o null>"
 }
 
 Los tipos posibles son:
-- "todos": el usuario quiere aumentar todos los productos, sin excepcion
-- "individual": el usuario menciona un producto especifico por nombre
-- "por_atributo": el usuario menciona una caracteristica, categoria, material, marca, color, tamano, tipo, etc. CLAVE: si dice "productos de [algo]" o "los de [algo]" es por_atributo
+- "todos": el usuario quiere aumentar TODOS los productos, sin mencionar ningun producto o atributo en particular
+- "individual": el usuario menciona un producto ESPECIFICO por nombre (ej: "leche", "arroz", "silla") CLAVE: NO menciona "productos" en plural
+- "por_atributo": el usuario menciona una caracteristica de productos (material, marca, color, tamaño, tipo, etc.) GENERALMENTE DICE "productos" en plural
+- "por_categoria": el usuario menciona la palabra "categoria" explicitamente (ej: "categoria material", "de la categoria marca")
 
 Ejemplos:
-- "aumentame todos los productos un 15%" -> {"tipo": "todos", "porcentaje": 15, "attribute": null}
-- "aumentame la leche un 30%" -> {"tipo": "individual", "porcentaje": 30, "attribute": "leche"}
-- "aumentame los productos de plastico un 20%" -> {"tipo": "por_atributo", "porcentaje": 20, "attribute": "plastico"}
-- "aumentame los de marca Adidas un 12%" -> {"tipo": "por_atributo", "porcentaje": 12, "attribute": "Adidas"}
-- "aumentame los productos de electronica un 30%" -> {"tipo": "por_atributo", "porcentaje": 30, "attribute": "electronica"}
-- "aumentame los productos lacteos un 10%" -> {"tipo": "por_atributo", "porcentaje": 10, "attribute": "lacteos"}
-- "aumentame los de color rojo un 5%" -> {"tipo": "por_atributo", "porcentaje": 5, "attribute": "rojo"}
+- "aumentame todos los productos un 15%" -> {"tipo": "todos", "porcentaje": 15, "value": null}
+- "aumentame la leche un 30%" -> {"tipo": "individual", "porcentaje": 30, "value": "leche"}
+- "aumentame el arroz un 10%" -> {"tipo": "individual", "porcentaje": 10, "value": "arroz"}
+- "aumentame los productos de plastico un 20%" -> {"tipo": "por_atributo", "porcentaje": 20, "value": "plastico"}
+- "aumentame un 50% los productos stanley" -> {"tipo": "por_atributo", "porcentaje": 50, "value": "stanley"}
+- "aumentame un 45% los productos de marca stanley" -> {"tipo": "por_atributo", "porcentaje": 45, "value": "stanley"}
+- "aumentame los de marca Adidas un 12%" -> {"tipo": "por_atributo", "porcentaje": 12, "value": "Adidas"}
+- "aumentame los productos de electronica un 30%" -> {"tipo": "por_atributo", "porcentaje": 30, "value": "electronica"}
+- "aumentame los productos lacteos un 10%" -> {"tipo": "por_atributo", "porcentaje": 10, "value": "lacteos"}
+- "aumentame los de color rojo un 5%" -> {"tipo": "por_atributo", "porcentaje": 5, "value": "rojo"}
+- "aumentame un 10% los productos que sean de nailon" -> {"tipo": "por_atributo", "porcentaje": 10, "value": "nailon"}
+- "aumentame los productos de la categoria material un 10%" -> {"tipo": "por_categoria", "porcentaje": 10, "value": "material"}
+
+IMPORTANTE: El campo "value" debe contener SOLO una palabra clave (la marca, el material, el producto). Si el usuario dice "productos de marca stanley", el value es "stanley". Si dice "productos de plastico", el value es "plastico".
 
 Responde SOLO con el JSON, sin explicaciones.
 """
 
 PARAMETER temperature 0
-PARAMETER num_predict 60
+PARAMETER num_predict 80
 PARAMETER top_k 10
 PARAMETER top_p 0.5

@@ -15,7 +15,6 @@ from Backend.agent.model1_intent import detect_intent
 from Backend.agent.model2a_create_product import create_product_with_attributes
 from Backend.agent.model2b_price_type import detect_price_increase_type
 from Backend.agent.model3_detect_attr import detect_category_and_value
-from Backend.agent.model4_resolve_attr import resolve_attribute_in_db
 from Backend.agent.model5_incomplete import handle_incomplete_info
 from Backend.agent.model6_general import handle_general_query
 from Backend.services.attribute_service import AttributeService
@@ -68,9 +67,48 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
             price_type_result = detect_price_increase_type(user_message)
             tipo = price_type_result.get("tipo")
             porcentaje = price_type_result.get("porcentaje")
-            attribute = price_type_result.get("attribute")
+            attribute = price_type_result.get("attribute") or price_type_result.get("value")
 
             print("RESULTADO DEL DETECT_PRICE_INCREASE_TYPE", price_type_result)
+
+            import re
+            stopwords = {'un','una','el','la','los','las','de','del','que','y','a','para','por','con','en','al','todo','todos',
+                         'producto','productos','articulos','artículos','items','ítems',
+                         'aumentame','subime','incrementa','dame','poneme','pone','dejame'}
+
+            if attribute and ' ' in attribute.strip():
+                parts = attribute.strip().split()
+                attribute = parts[-1]
+                if tipo == "individual":
+                    tipo = "por_atributo"
+
+            attr_extracted = None
+            from_productos_pattern = False
+
+            m = re.search(r'productos\s+de\s+\w+\s+(\w+)', user_message, re.IGNORECASE)
+            if not m:
+                m = re.search(r'productos\s+de\s+(\w+)', user_message, re.IGNORECASE)
+            if not m:
+                m = re.search(r'productos?\s+(\w+)', user_message, re.IGNORECASE)
+            if m and m.group(1).lower() not in stopwords:
+                attr_extracted = m.group(1)
+                from_productos_pattern = True
+
+            if not attr_extracted:
+                m = re.search(r'(\w+)\s+un\s+\d+%', user_message)
+                if m and m.group(1).lower() not in stopwords:
+                    attr_extracted = m.group(1)
+            if not attr_extracted:
+                m = re.search(r'(?:aumentame|subime|incrementa)\s+(?:los|las)\s+(\w+)', user_message, re.IGNORECASE)
+                if m and m.group(1).lower() not in stopwords:
+                    attr_extracted = m.group(1)
+
+            if attr_extracted:
+                print(f"ATRIBUTO EXTRAIDO MANUALMENTE: {attr_extracted}")
+                if not attribute:
+                    attribute = attr_extracted
+                if tipo == "todos" or (tipo == "individual" and from_productos_pattern):
+                    tipo = "por_atributo"
 
             if not tipo:
                 return AgentResponse(
@@ -99,8 +137,14 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
                     data={"updated_products": len(products), "percentage": porcentaje}
                 )
 
-            elif tipo == "individual":
+            if tipo == "individual":
                 print("ENTRANDO EN AUMENTAR INDIVIDUAL")
+                if not attribute:
+                    return AgentResponse(
+                        message="No entendi que producto queres aumentar. ¿Podes decirme el nombre exacto?",
+                        action_executed="aumentar_precios",
+                        success=False
+                    )
                 products = db.query(Product).filter(Product.name.ilike(f"%{attribute}%")).all()
                 if not products:
                     return AgentResponse(
@@ -139,24 +183,48 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
                     categoria_existe = category_and_value.get("categoria_existe", False)
 
                     if not categoria_inf:
+                        cat_fb = db.query(Category).filter(Category.name.ilike(f"%{attribute}%")).first()
+                        if cat_fb:
+                            attrs_fb = db.query(Attribute).filter(Attribute.category_id == cat_fb.id).all()
+                            if attrs_fb:
+                                attr_ids_fb = [a.id for a in attrs_fb]
+                                pas_fb = db.query(ProductAttribute).filter(
+                                    ProductAttribute.attribute_id.in_(attr_ids_fb)
+                                ).all()
+                                pids_fb = list(set(pa.product_id for pa in pas_fb))
+                                if pids_fb:
+                                    prods_fb = db.query(Product).filter(Product.id.in_(pids_fb)).all()
+                                    for p in prods_fb:
+                                        p.price = round(p.price * (1 + porcentaje / 100), 2)
+                                    db.commit()
+                                    return AgentResponse(
+                                        message=f"Se aumento un {porcentaje}% a {len(prods_fb)} producto(s) de la categoria '{cat_fb.name}'",
+                                        action_executed="aumentar_precios",
+                                        success=True,
+                                        data={"updated_products": len(prods_fb), "category": cat_fb.name, "percentage": porcentaje}
+                                    )
                         return AgentResponse(
                             message=f"No pude determinar a que categoria pertenece '{attribute}'.",
                             action_executed="aumentar_precios",
                             success=False
                         )
 
-                    if not categoria_existe:
-                        nueva_cat = Category(name=categoria_inf)
-                        db.add(nueva_cat)
-                        db.commit()
-                        db.refresh(nueva_cat)
-
                     cat = db.query(Category).filter(Category.name == categoria_inf).first()
                     if not cat:
-                        cat = Category(name=categoria_inf)
-                        db.add(cat)
-                        db.commit()
-                        db.refresh(cat)
+                        try:
+                            cat = Category(name=categoria_inf)
+                            db.add(cat)
+                            db.commit()
+                            db.refresh(cat)
+                        except Exception:
+                            db.rollback()
+                            cat = db.query(Category).filter(Category.name == categoria_inf).first()
+                            if not cat:
+                                return AgentResponse(
+                                    message=f"Error al crear la categoria '{categoria_inf}'.",
+                                    action_executed="aumentar_precios",
+                                    success=False
+                                )
 
                     attr_record = db.query(Attribute).filter(
                         Attribute.category_id == cat.id,
@@ -185,33 +253,73 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
                         data={"updated_products": len(products), "category": categoria_inf, "attribute": valor, "percentage": porcentaje}
                     )
                 else:
-                    all_products = db.query(Product).all()
-                    productos_list = [
-                        {"id": p.id, "name": p.name, "description": p.description or "", "price": p.price}
-                        for p in all_products
-                    ]
-                    resolve_result = resolve_attribute_in_db(categoria_inf, valor, categoria_existe, productos_list)
-                    if resolve_result.get("puede_inferir"):
-                        detected_ids = resolve_result.get("productos_detectados", [])
-                        if detected_ids:
-                            products = db.query(Product).filter(Product.id.in_(detected_ids)).all()
-                            for p in products:
-                                bridge = ProductAttribute(product_id=p.id, attribute_id=attr_record.id)
-                                db.add(bridge)
-                                p.price = round(p.price * (1 + porcentaje / 100), 2)
-                            db.commit()
-                            return AgentResponse(
-                                message=f"Se aumento un {porcentaje}% a {len(products)} producto(s) con {categoria_inf} = {valor}",
-                                action_executed="aumentar_precios",
-                                success=True,
-                                data={"updated_products": len(products), "category": categoria_inf, "attribute": valor, "percentage": porcentaje}
-                            )
+                    matched = db.query(Product).filter(
+                        (Product.name.ilike(f"%{valor}%")) | (Product.description.ilike(f"%{valor}%"))
+                    ).all()
+                    if matched:
+                        for p in matched:
+                            exists = db.query(ProductAttribute).filter_by(product_id=p.id, attribute_id=attr_record.id).first()
+                            if not exists:
+                                db.add(ProductAttribute(product_id=p.id, attribute_id=attr_record.id))
+                            p.price = round(p.price * (1 + porcentaje / 100), 2)
+                        db.commit()
+                        return AgentResponse(
+                            message=f"Se asigno '{valor}' y se aumento un {porcentaje}% a {len(matched)} producto(s).",
+                            action_executed="aumentar_precios",
+                            success=True,
+                            data={"updated_products": len(matched), "category": categoria_inf, "attribute": valor, "percentage": porcentaje}
+                        )
                     return AgentResponse(
-                        message=resolve_result.get("mensaje_usuario", f"No pude determinar que productos tienen {categoria_inf} = {valor}. ¿Podes indicarmelo?"),
+                        message=f"No encontre productos con '{valor}' en nombre, descripcion ni atributos.",
                         action_executed="aumentar_precios",
                         success=False,
                         data={"context": {"intent": "aumentar_precios", "categoria": categoria_inf, "valor": valor, "porcentaje": porcentaje}}
                     )
+
+            elif tipo == "por_categoria":
+                print("ENTRANDO EN AUMENTAR POR CATEGORIA")
+                if not attribute:
+                    return AgentResponse(
+                        message="¿Que categoria queres aumentar?",
+                        action_executed="aumentar_precios",
+                        success=False
+                    )
+                cat = db.query(Category).filter(Category.name.ilike(f"%{attribute}%")).first()
+                if not cat:
+                    cats_list = ", ".join(c.name for c in db.query(Category).all())
+                    return AgentResponse(
+                        message=f"No encontre la categoria '{attribute}'. Categorias disponibles: {cats_list}",
+                        action_executed="aumentar_precios",
+                        success=False
+                    )
+                attrs = db.query(Attribute).filter(Attribute.category_id == cat.id).all()
+                if not attrs:
+                    return AgentResponse(
+                        message=f"La categoria '{cat.name}' no tiene atributos asignados aun.",
+                        action_executed="aumentar_precios",
+                        success=False
+                    )
+                attr_ids = [a.id for a in attrs]
+                pas = db.query(ProductAttribute).filter(
+                    ProductAttribute.attribute_id.in_(attr_ids)
+                ).all()
+                pids = list(set(pa.product_id for pa in pas))
+                if not pids:
+                    return AgentResponse(
+                        message=f"No hay productos con atributos de la categoria '{cat.name}'.",
+                        action_executed="aumentar_precios",
+                        success=False
+                    )
+                prods = db.query(Product).filter(Product.id.in_(pids)).all()
+                for p in prods:
+                    p.price = round(p.price * (1 + porcentaje / 100), 2)
+                db.commit()
+                return AgentResponse(
+                    message=f"Se aumento un {porcentaje}% a {len(prods)} producto(s) de la categoria '{cat.name}'",
+                    action_executed="aumentar_precios",
+                    success=True,
+                    data={"updated_products": len(prods), "category": cat.name, "percentage": porcentaje}
+                )
 
             return AgentResponse(
                 message="No pude procesar el aumento. Asegurate de incluir el porcentaje.",

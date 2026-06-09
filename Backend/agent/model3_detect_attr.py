@@ -8,8 +8,17 @@ def detect_category_and_value(value: str, existing_categories: list) -> dict:
 
     llm = get_attribute_classifier()
 
-    template = """Atributo: {value}
-Categorias: {categories}
+    template = """Clasifica el siguiente valor de atributo en una categoria existente.
+Devuelve SOLO un JSON sin texto adicional:
+
+{{
+  "categoria_inferida": "nombre de la categoria mas adecuada de la lista",
+  "valor": "{value}",
+  "categoria_existe": true o false segun si la categoria inferida esta en la lista de categorias proporcionadas
+}}
+
+Atributo: {value}
+Categorias disponibles: {categories}
 JSON:"""
 
     prompt = PromptTemplate(

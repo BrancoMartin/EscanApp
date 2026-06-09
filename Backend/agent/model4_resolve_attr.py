@@ -17,7 +17,15 @@ def resolve_attribute_in_db(categoria: str, valor: str, categoria_existe: bool, 
 
     llm = get_attribute_resolver()
 
-    template = "Buscar: categoria=\"{categoria}\", valor=\"{valor}\"\nProductos:\n{productos}\nJSON:"
+    template = """Determina que productos de la lista tienen el atributo con categoria="{categoria}" y valor="{valor}".
+Devuelve SOLO un JSON con el siguiente formato exacto, sin texto adicional:
+{{"puede_inferir": true, "productos_detectados": [1, 2, 3], "mensaje_usuario": "Se encontraron 3 productos"}}
+Los productos_detectados deben ser SOLO los IDs numericos de los productos que coinciden, NO objetos.
+
+Buscar: categoria="{categoria}", valor="{valor}"
+Productos:
+{productos}
+JSON:"""
 
     prompt = PromptTemplate(
         input_variables=["categoria", "valor", "productos"],
