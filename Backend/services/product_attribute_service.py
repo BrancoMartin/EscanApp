@@ -35,7 +35,7 @@ class ProductAttributeService:
        
         if not attribute_id: 
             raise ValueError("el id del atributo no esta")
-       
+
         product_attribute = ProductAttribute(product_id=product_id, attribute_id=attribute_id)
         response = self.repo.create(product_attribute)
         self._increment_attribute_count(attribute_id)

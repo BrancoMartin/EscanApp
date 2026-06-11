@@ -55,7 +55,7 @@ def create(data: ProductInput, service: ProductService = Depends(get_product_ser
            service_attribute: AttributeService = Depends(get_attribute_service),  service_product_attribute: ProductAttributeService = Depends(get_product_attribute_service)):
     try:
         print("Intentando crear producto con datos:", data)
-        productCreate = service.create(data.barcode.lower(), data.name.lower(), data.price.lower(), data.description.lower())
+        productCreate = service.create(data.barcode, data.name.lower(), data.price, data.description.lower())
 
         categories = service_category.get_all()
 

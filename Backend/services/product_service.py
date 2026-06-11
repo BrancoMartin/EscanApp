@@ -39,6 +39,12 @@ class ProductService:
         if self.repo.get_by_barcode(barcode):
             raise ValueError("Ya existe un producto con ese codigo de barras")
        
+        get_product = self.repo.get_by_name_and_description(name, description)
+
+        print(get_product)
+
+        if get_product: 
+            raise ValueError("Ya existe un producto con ese nombre y descripcion")
 
         product = Product(name=name.lower(), description=description.lower(), price=price, barcode=barcode)
         response = self.repo.create(product)

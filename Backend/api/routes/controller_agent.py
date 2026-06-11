@@ -24,6 +24,15 @@ load_dotenv()
 router = APIRouter()
 
 
+_NULL_SYNONYMS = frozenset({
+    'null', 'none', 'nada', 'vacio', 'vacío', 'ninguno', 'ninguna',
+    'nil', 'empty', 'blank', 'unknown', 'desconocido', 'na', 'n/a', '-'
+})
+
+def _is_valid_str(v):
+    return isinstance(v, str) and v.strip().lower() not in _NULL_SYNONYMS
+
+
 _pending_products: dict = {}
 
 def save_pending_product(session_id: str, product_data: dict):
@@ -181,6 +190,9 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
                     categoria_inf = category_and_value.get("categoria_inferida")
                     valor = category_and_value.get("valor")
                     categoria_existe = category_and_value.get("categoria_existe", False)
+
+                    if not _is_valid_str(categoria_inf) or not _is_valid_str(valor):
+                        categoria_inf = None
 
                     if not categoria_inf:
                         cat_fb = db.query(Category).filter(Category.name.ilike(f"%{attribute}%")).first()
@@ -389,7 +401,7 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
                 for attr in atributos_inf:
                     cat_name = attr.get("categoria")
                     val = attr.get("valor")
-                    if cat_name and val:
+                    if _is_valid_str(cat_name) and _is_valid_str(val):
                         ac = db.query(Category).filter(Category.name == cat_name).first()
                         if not ac:
                             ac = Category(name=cat_name)
@@ -453,7 +465,7 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
                 attr = result["atributos_inferidos"][0]
                 cat_name = attr.get("categoria")
                 val = attr.get("valor")
-                if cat_name and val:
+                if _is_valid_str(cat_name) and _is_valid_str(val):
                     ac = db.query(Category).filter(Category.name == cat_name).first()
                     if not ac:
                         ac = Category(name=cat_name)
