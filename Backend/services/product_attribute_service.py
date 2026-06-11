@@ -62,3 +62,8 @@ class ProductAttributeService:
         result = self.repo.create(product_attribute)
         self._increment_attribute_count(attribute_id)
         return result
+
+    def assign_attribute_to_product(self, db: Session, product_id: int, attribute_id: int):
+        result = self.assign_attribute_to_product(product_id, attribute_id)
+
+        return result

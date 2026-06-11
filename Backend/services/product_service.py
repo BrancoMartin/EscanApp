@@ -52,9 +52,6 @@ class ProductService:
         "barcode": response.barcode,
         "description": response.description
     }}
-    
-
-
 
 
 

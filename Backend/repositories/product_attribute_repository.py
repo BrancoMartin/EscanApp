@@ -16,3 +16,13 @@ class ProductAttributeRepository(RepositoryBase[ProductAttribute]):
             ProductAttribute.product_id == product_id,
             ProductAttribute.attribute_id == attribute_id
         ).first()
+    
+    def assign_attribute_to_product(db: Session, product_id: int, attribute_id: int):
+        exists = db.query(ProductAttribute).filter_by(
+            product_id=product_id,
+            attribute_id=attribute_id
+        ).first()
+        if not exists:
+            pa = ProductAttribute(product_id=product_id, attribute_id=attribute_id)
+            db.add(pa)
+            db.commit()

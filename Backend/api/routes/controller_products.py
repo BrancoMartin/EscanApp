@@ -39,15 +39,15 @@ def get_by_barcode(
         raise HTTPException(status_code=404, detail="Producto no encontrado")
     return result
 
-def assign_attribute_to_product(db: Session, product_id: int, attribute_id: int):
-    exists = db.query(ProductAttribute).filter_by(
-        product_id=product_id,
-        attribute_id=attribute_id
-    ).first()
-    if not exists:
-        pa = ProductAttribute(product_id=product_id, attribute_id=attribute_id)
-        db.add(pa)
-        db.commit()
+def assign_attribute_to_product(db: Session, product_id: int, attribute_id: int,  
+                                product_attribute_service: ProductAttribute = Depends(get_product_attribute_service)):
+    
+    result = product_attribute_service.assign_attribute_to_product(product_id, attribute_id)
+    if result is None: 
+        print("ERROR ASIGNANDO ATRIBUTO AL PRODUCTO")
+        raise HTTPException(status_code=404, detail="producto no encontrado")
+    return result
+
 
 # Create product
 @router.post("/")
@@ -55,13 +55,13 @@ def create(data: ProductInput, service: ProductService = Depends(get_product_ser
            service_attribute: AttributeService = Depends(get_attribute_service),  service_product_attribute: ProductAttributeService = Depends(get_product_attribute_service)):
     try:
         print("Intentando crear producto con datos:", data)
-        productCreate = service.create(data.barcode, data.name, data.price, data.description)
+        productCreate = service.create(data.barcode.lower(), data.name.lower(), data.price.lower(), data.description.lower())
 
         categories = service_category.get_all()
 
         created_categories = create_categories(
-            nombre=data.name,
-            descripcion=data.description,
+            nombre=data.name.lower(),
+            descripcion=data.description.lower(),
             proveedor=None
         )
 
@@ -69,16 +69,16 @@ def create(data: ProductInput, service: ProductService = Depends(get_product_ser
 
         categorias_nuevas = created_categories.get("categorias_nuevas", [])
         for cat_name in categorias_nuevas:
-            cat = service_category.get_or_create_category(cat_name)
+            cat = service_category.get_or_create_category(cat_name.lower())
             print(f"Categoria creada: {cat.name} (id={cat.id})")
 
         categories = service_category.get_all()
-        category_names = [cat.name for cat in categories]
+        category_names = [cat.name.lower() if cat.name else cat.name for cat in categories]
 
         # 2. Extraer atributos con IA
         result = attribute_extractor(
-            nombre=data.name,
-            descripcion=data.description,
+            nombre=data.name.lower(),
+            descripcion=data.description.lower(),
             proveedor=None,
             categoria=category_names
         )
@@ -89,12 +89,12 @@ def create(data: ProductInput, service: ProductService = Depends(get_product_ser
         attributes = result if isinstance(result, list) else result.get("atributos", [])
         print("ATTRIBUTOS", attributes)
         for attr in attributes:
-            category = service_category.get_by_name(attr["categoria"])
+            category = service_category.get_by_name(attr["categoria"].lower())
             if not category:
-                print(f"ERROR: Categoria '{attr['categoria']}' no encontrada")
+                print(f"ERROR: Categoria '{attr['categoria'].lower()}' no encontrada")
                 continue
-            attribute_obj = service_attribute.get_or_create_attribute(category.id, attr["valor"])
-            product = service.get_by_name(data.name)
+            attribute_obj = service_attribute.get_or_create_attribute(category.id, attr["valor"].lower())
+            product = service.get_by_name(data.name.lower())
             product_attribute = service_product_attribute.get_or_create(product.id, attribute_obj.id)
             if not product_attribute:
                 print(f"ERROR: No se pudo asignar atributo '{attr['valor']}' al producto '{product.name}'")
@@ -111,7 +111,7 @@ def create(data: ProductInput, service: ProductService = Depends(get_product_ser
 @router.put("/{product_id}")
 def update(product_id: int, data: ProductInput, service: ProductService = Depends(get_product_service)):
     try:
-        product = service.update(product_id, data.barcode, data.name, data.price, data.description)
+        product = service.update(product_id, data.barcode.lower(), data.name.lower(), data.price.lower(), data.description.lower())
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     if not product:

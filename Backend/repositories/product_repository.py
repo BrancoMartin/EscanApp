@@ -19,3 +19,5 @@ class ProductRepository(RepositoryBase[Product]):
 
     def get_by_name(self, name): 
         return self.db.query(Product).filter(Product.name == name).first()
+    
+    
