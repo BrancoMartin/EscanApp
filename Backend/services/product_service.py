@@ -40,7 +40,7 @@ class ProductService:
             raise ValueError("Ya existe un producto con ese codigo de barras")
        
 
-        product = Product(name=name, description=description, price=price, barcode=barcode)
+        product = Product(name=name.lower(), description=description.lower(), price=price, barcode=barcode)
         response = self.repo.create(product)
 
         return {
@@ -63,11 +63,11 @@ class ProductService:
             existing = self.repo.get_by_barcode(barcode)
             if existing and existing.id != product_id:
                 raise ValueError("Another product with that barcode already exists")
-            product.barcode = barcode
+            product.barcode = barcode.lower()
         if name is not None:
-            product.name = name
+            product.name = name.lower()
         if description is not None:
-            product.description = description
+            product.description = description.lower()
         if price is not None:
             product.price = price
         return self.repo.update(product)
