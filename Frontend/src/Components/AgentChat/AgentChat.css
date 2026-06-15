@@ -229,6 +229,41 @@
   border-radius: 0 0 0 0;
 }
 
+.input-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  position: relative;
+}
+
+.chat-input.barcode-scanner {
+  border-color: #4caf50;
+  background: linear-gradient(135deg, #f1f8e9 0%, #e8f5e9 100%);
+  padding-right: 140px;
+}
+
+.barcode-badge {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #2e7d32;
+  background: #c8e6c9;
+  padding: 3px 10px;
+  border-radius: 10px;
+  white-space: nowrap;
+  animation: barcodePulse 1.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes barcodePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
 .chat-input {
   flex: 1;
   border: 2px solid rgba(123, 70, 255, 0.2);
@@ -322,6 +357,15 @@
   .chat-messages {
     padding: 16px;
     gap: 10px;
+  }
+
+  .chat-input.barcode-scanner {
+    padding-right: 110px;
+  }
+
+  .barcode-badge {
+    font-size: 0.65rem;
+    padding: 2px 8px;
   }
 }
 

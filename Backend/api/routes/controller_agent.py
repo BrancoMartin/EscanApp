@@ -17,6 +17,8 @@ from Backend.agent.model2b_price_type import detect_price_increase_type
 from Backend.agent.model3_detect_attr import detect_category_and_value
 from Backend.agent.model5_incomplete import handle_incomplete_info
 from Backend.agent.model6_general import handle_general_query
+from Backend.agent.model4_resolve_attr import resolve_attribute_in_db
+from Backend.agent.model_attribute_extractor import attribute_extractor
 from Backend.services.attribute_service import AttributeService
 
 load_dotenv()
@@ -45,6 +47,42 @@ def clear_pending_product(session_id: str):
     _pending_products.pop(session_id, None)
 
 
+def _enriquecer_producto_con_atributos(db: Session, product: Product, user_message: str = ""):
+    cats = db.query(Category).all()
+    cats_str = ", ".join(c.name for c in cats) if cats else ""
+    atributos_extra = attribute_extractor(product.name, product.description or "", cats_str, "")
+    if not atributos_extra:
+        return 0
+    contados = 0
+    for attr in atributos_extra:
+        cat_name = attr.get("categoria")
+        val = attr.get("valor")
+        if not _is_valid_str(cat_name) or not _is_valid_str(val):
+            continue
+        ac = db.query(Category).filter(Category.name == cat_name).first()
+        if not ac:
+            ac = Category(name=cat_name)
+            db.add(ac)
+            db.commit()
+            db.refresh(ac)
+        av = db.query(Attribute).filter(
+            Attribute.category_id == ac.id,
+            Attribute.name == val
+        ).first()
+        if not av:
+            av = Attribute(category_id=ac.id, name=val)
+            db.add(av)
+            db.commit()
+            db.refresh(av)
+        existe = db.query(ProductAttribute).filter_by(product_id=product.id, attribute_id=av.id).first()
+        if not existe:
+            db.add(ProductAttribute(product_id=product.id, attribute_id=av.id))
+            contados += 1
+    if contados:
+        db.commit()
+    return contados
+
+
 class ChatMessage(BaseModel):
     message: str
     conversation_history: list = []
@@ -65,7 +103,153 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
         conversation_history = chat_msg.conversation_history or []
         context = chat_msg.context or {}
 
-        intent_result = detect_intent(user_message, conversation_history)
+        # --- Si hay un producto pendiente (creacion en curso), 
+        #      NO clasificamos intent — seguimos el flujo de creacion ---
+        pending = get_pending_product("default")
+        if pending is not None:
+            product_data = pending
+            nombre = product_data.get("nombre")
+
+            if not nombre:
+                nombre = user_message.strip()
+                if not nombre or re.match(r"^\d+$", nombre):
+                    return AgentResponse(
+                        message="¿Que nombre tiene el producto?",
+                        action_executed="crear_producto",
+                        success=False,
+                        data={"product_data": product_data, "awaiting_name": True}
+                    )
+                product_data["nombre"] = nombre
+                save_pending_product("default", product_data)
+                return AgentResponse(
+                    message=f"Producto: {nombre}\n\n¿Que precio tiene?",
+                    action_executed="crear_producto",
+                    success=True,
+                    data={"product_data": product_data, "awaiting_price": True}
+                )
+
+            if not product_data.get("precio"):
+                precio_match = re.search(r'(\d+[\.,]?\d*)', user_message)
+                if not precio_match:
+                    return AgentResponse(
+                        message=f"Producto: {nombre}\n\nNo entendi el precio. ¿Podes decirme el valor numerico?",
+                        action_executed="crear_producto",
+                        success=False,
+                        data={"product_data": product_data, "awaiting_price": True}
+                    )
+                product_data["precio"] = float(precio_match.group(1).replace(",", "."))
+                save_pending_product("default", product_data)
+                if not product_data.get("barcode"):
+                    return AgentResponse(
+                        message=f"Datos del producto:\nNombre: {nombre}\nPrecio: ${product_data['precio']}\n\nAhora escaneá o ingresá el codigo de barras.",
+                        action_executed="crear_producto",
+                        success=True,
+                        data={"product_data": product_data}
+                    )
+
+            if not product_data.get("barcode"):
+                barcode_raw = user_message.strip()
+                if re.match(r"^\d+$", barcode_raw):
+                    product_data["barcode"] = barcode_raw
+                else:
+                    bc_match = re.search(r'\b(\d{6,})\b', user_message)
+                    if bc_match:
+                        product_data["barcode"] = bc_match.group(1)
+                    else:
+                        return AgentResponse(
+                            message=f"Datos del producto:\nNombre: {nombre}\nPrecio: ${product_data.get('precio')}\n\nEscaneá o ingresá el codigo de barras (solo numeros).",
+                            action_executed="crear_producto",
+                            success=True,
+                            data={"product_data": product_data}
+                        )
+                save_pending_product("default", product_data)
+
+            # Completar creacion: ya tenemos precio + barcode
+            existing = db.query(Product).filter(Product.barcode == product_data["barcode"]).first()
+            if existing:
+                clear_pending_product("default")
+                return AgentResponse(
+                    message=f"Ya existe un producto con ese codigo de barras: {existing.name}",
+                    action_executed="crear_producto",
+                    success=False
+                )
+
+            product = Product(
+                name=nombre,
+                price=float(product_data["precio"]),
+                barcode=product_data["barcode"],
+                description=product_data.get("descripcion")
+            )
+            db.add(product)
+            db.commit()
+            db.refresh(product)
+
+            atributos_inf = product_data.get("atributos_inferidos", [])
+            if atributos_inf:
+                for attr in atributos_inf:
+                    cat_name = attr.get("categoria")
+                    val = attr.get("valor")
+                    if _is_valid_str(cat_name) and _is_valid_str(val):
+                        ac = db.query(Category).filter(Category.name == cat_name).first()
+                        if not ac:
+                            ac = Category(name=cat_name)
+                            db.add(ac)
+                            db.commit()
+                            db.refresh(ac)
+                        av = db.query(Attribute).filter(
+                            Attribute.category_id == ac.id,
+                            Attribute.name == val
+                        ).first()
+                        if not av:
+                            av = Attribute(category_id=ac.id, name=val)
+                            db.add(av)
+                            db.commit()
+                            db.refresh(av)
+                        bridge = ProductAttribute(product_id=product.id, attribute_id=av.id)
+                        db.add(bridge)
+                db.commit()
+
+            extras = _enriquecer_producto_con_atributos(db, product)
+            if extras:
+                print(f"[ENRIQUECER] {extras} atributos adicionales asignados a '{nombre}'")
+
+            clear_pending_product("default")
+            return AgentResponse(
+                message=f"Producto '{nombre}' creado exitosamente!",
+                action_executed="crear_producto",
+                success=True,
+                data={"id": product.id, "name": product.name, "price": product.price, "barcode": product.barcode}
+            )
+
+        # --- Detectar escaneo de codigo de barras ---
+        bc_raw = user_message.strip()
+        if re.match(r"^\d{6,}$", bc_raw):
+            prod = db.query(Product).filter(Product.barcode == bc_raw).first()
+            if prod:
+                attrs = db.query(Attribute).join(ProductAttribute).filter(
+                    ProductAttribute.product_id == prod.id
+                ).all()
+                attr_lines = []
+                for a in attrs:
+                    cat_name = db.query(Category.name).filter(Category.id == a.category_id).scalar()
+                    attr_lines.append(f"  - {cat_name}: {a.name}")
+                attr_str = "\n" + "\n".join(attr_lines) if attr_lines else ""
+                return AgentResponse(
+                    message=f"**Producto encontrado:**\nNombre: {prod.name}\nPrecio: ${prod.price}\nCodigo: {prod.barcode}{attr_str}",
+                    action_executed="escanear_barcode",
+                    success=True,
+                    data={"id": prod.id, "name": prod.name, "price": prod.price, "barcode": prod.barcode}
+                )
+            save_pending_product("default", {"barcode": bc_raw, "nombre": None, "precio": None, "descripcion": None, "atributos_inferidos": []})
+            return AgentResponse(
+                message=f"No encontre ningun producto con el codigo **{bc_raw}**. ¿Que nombre le queres poner?",
+                action_executed="escanear_barcode",
+                success=False,
+                data={"barcode": bc_raw, "awaiting_name": True}
+            )
+
+        # --- Flujo normal: clasificar intent ---
+        intent_result = detect_intent(user_message)
         intent = intent_result.get("intent") if isinstance(intent_result, dict) else intent_result
 
         print(f"[AGENT] Intent: {intent}")
@@ -80,7 +264,6 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
 
             print("RESULTADO DEL DETECT_PRICE_INCREASE_TYPE", price_type_result)
 
-            import re
             stopwords = {'un','una','el','la','los','las','de','del','que','y','a','para','por','con','en','al','todo','todos',
                          'producto','productos','articulos','artículos','items','ítems',
                          'aumentame','subime','incrementa','dame','poneme','pone','dejame'}
@@ -421,6 +604,10 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
                         db.add(bridge)
                 db.commit()
 
+            extras = _enriquecer_producto_con_atributos(db, product)
+            if extras:
+                print(f"[ENRIQUECER] {extras} atributos adicionales asignados a '{nombre}'")
+
             clear_pending_product("default")
             return AgentResponse(
                 message=f"Producto '{nombre}' creado exitosamente!",
@@ -430,11 +617,29 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
             )
 
         elif intent == "crear_categoria":
-            result = create_product_with_attributes(user_message, [])
+            m = re.search(r'(?:categoria|categoría)\s+["""]?(.+?)["""]?\s*$', user_message, re.IGNORECASE)
+            if m and m.group(1).strip():
+                cat_name = m.group(1).strip().rstrip('.')
+                existing = db.query(Category).filter(Category.name == cat_name).first()
+                if existing:
+                    return AgentResponse(
+                        message=f"La categoria '{cat_name}' ya existe.",
+                        action_executed="crear_categoria",
+                        success=False
+                    )
+                cat = Category(name=cat_name)
+                db.add(cat)
+                db.commit()
+                return AgentResponse(
+                    message=f"Categoria '{cat_name}' creada exitosamente!",
+                    action_executed="crear_categoria",
+                    success=True,
+                    data={"id": cat.id, "name": cat.name}
+                )
             return AgentResponse(
-                message="¿Que nombre queres para la categoria?",
+                message="No entendi el nombre de la categoria. ¿Podes repetirlo?",
                 action_executed="crear_categoria",
-                success=True
+                success=False
             )
 
         elif intent == "listar_categorias":
@@ -461,34 +666,75 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
             cats = db.query(Category).all()
             existing_categories = [{"id": c.id, "name": c.name} for c in cats]
             result = create_product_with_attributes(user_message, existing_categories)
+            attr = None
             if result.get("atributos_inferidos"):
                 attr = result["atributos_inferidos"][0]
-                cat_name = attr.get("categoria")
-                val = attr.get("valor")
-                if _is_valid_str(cat_name) and _is_valid_str(val):
-                    ac = db.query(Category).filter(Category.name == cat_name).first()
-                    if not ac:
-                        ac = Category(name=cat_name)
-                        db.add(ac)
-                        db.commit()
-                        db.refresh(ac)
-                    av = db.query(Attribute).filter(
-                        Attribute.category_id == ac.id,
-                        Attribute.name == val
-                    ).first()
-                    if not av:
-                        av = Attribute(category_id=ac.id, name=val)
-                        db.add(av)
-                        db.commit()
-                    return AgentResponse(
-                        message=f"Atributo '{val}' agregado a categoria '{cat_name}'.",
-                        action_executed="agregar_atributo",
-                        success=True
-                    )
+
+            if not attr or not _is_valid_str(attr.get("categoria")) or not _is_valid_str(attr.get("valor")):
+                idx = re.search(r'(?:atributo|attributo)\s+', user_message, re.IGNORECASE)
+                if idx:
+                    rest = user_message[idx.end():]
+                    val = re.split(r'\s+(?:y\s+|asignal\w*|asigna\w*|para\s+)', rest, maxsplit=1, flags=re.IGNORECASE)[0].strip().rstrip('.,;:¿?"""''')
+                    cat_name = None
+                    if val:
+                        m2 = re.search(r'^["""]?(.+?)["""]?\s+(?:de|en)\s+["""]?(.+?)["""]?$', val, re.IGNORECASE)
+                        if m2:
+                            val = m2.group(1).strip()
+                            cat_name = m2.group(2).strip()
+                        cat_name = cat_name or detect_category_and_value(val, existing_categories).get("categoria_inferida")
+                        if val:
+                            attr = {"categoria": cat_name if _is_valid_str(cat_name) else val, "valor": val}
+
+            if not attr:
+                return AgentResponse(
+                    message="No entendi que atributo y categoria queres agregar. Decime por ejemplo: 'agregar atributo ropa de categoria indumentaria'",
+                    action_executed="agregar_atributo",
+                    success=False
+                )
+            cat_name = attr.get("categoria")
+            val = attr.get("valor")
+
+            categoria_existe = bool(db.query(Category).filter(Category.name == cat_name).first())
+            ac = db.query(Category).filter(Category.name == cat_name).first()
+            if not ac:
+                ac = Category(name=cat_name)
+                db.add(ac)
+                db.commit()
+                db.refresh(ac)
+            av = db.query(Attribute).filter(
+                Attribute.category_id == ac.id,
+                Attribute.name == val
+            ).first()
+            if not av:
+                av = Attribute(category_id=ac.id, name=val)
+                db.add(av)
+                db.commit()
+
+            # --- Auto-asignar a productos que coincidan ---
+            productos = db.query(Product).all()
+            productos_list = [{"id": p.id, "name": p.name, "description": p.description or ""} for p in productos]
+            resolved = resolve_attribute_in_db(cat_name, val, categoria_existe, productos_list)
+            productos_ids = resolved.get("productos_detectados", [])
+            asignados = 0
+            for pid in productos_ids:
+                existe = db.query(ProductAttribute).filter_by(product_id=pid, attribute_id=av.id).first()
+                if not existe:
+                    db.add(ProductAttribute(product_id=pid, attribute_id=av.id))
+                    asignados += 1
+            if asignados:
+                db.commit()
+
+            msg = f"Atributo '{val}' agregado a categoria '{cat_name}'."
+            if asignados:
+                msg += f" Se asigno automaticamente a {asignados} producto(s)."
+            else:
+                msg += " No se encontraron productos para asignar automaticamente."
+
             return AgentResponse(
-                message="No entendi que atributo y categoria queres agregar.",
+                message=msg,
                 action_executed="agregar_atributo",
-                success=False
+                success=True,
+                data={"attribute_id": av.id, "category": cat_name, "value": val, "productos_asignados": asignados}
             )
 
         elif intent == "info_incompleta":

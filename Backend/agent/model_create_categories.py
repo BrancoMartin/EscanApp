@@ -7,35 +7,16 @@ _NULL_SYNONYMS = frozenset({
     'nil', 'empty', 'blank', 'unknown', 'desconocido', 'na', 'n/a', '-'
 })
 
+
 def create_categories(nombre, descripcion, proveedor):
     llm = create_categories_by_products()
-
-    template = """
-nombre: {nombre}
-descripcion: {descripcion}
-proveedor: {proveedor}
-
-Crea categorias de atributo de ESTE producto específico.
-"""
-
-    prompt = PromptTemplate(
-        input_variables=["nombre", "descripcion", "proveedor"],
-        template=template
-    )
-
+    template = "\nnombre: {nombre}\ndescripcion: {descripcion}\nproveedor: {proveedor}\n\nCrea categorias de atributo de ESTE producto especifico."
+    prompt = PromptTemplate(input_variables=["nombre", "descripcion", "proveedor"], template=template)
     chain = prompt | llm
-
     try:
-        response = chain.invoke({
-            "nombre": nombre,
-            "descripcion": descripcion,
-            "proveedor": proveedor
-        })
-
-        content = response.strip()
-        clean = content.replace("```json", "").replace("```", "").strip()
+        response = chain.invoke({"nombre": nombre, "descripcion": descripcion, "proveedor": proveedor})
+        clean = response.strip().replace("```json", "").replace("```", "").strip()
         data = json.loads(clean)
-
         cats = data.get("categorias_nuevas", [])
         if isinstance(cats, list):
             data["categorias_nuevas"] = [
@@ -45,7 +26,6 @@ Crea categorias de atributo de ESTE producto específico.
                 and c["nombre"].strip().lower() not in _NULL_SYNONYMS
             ]
         return data
-
     except Exception as e:
-        print(f"[create_categories] Error: {e}")
+        print(f"[create_cats] Error: {e}")
         return {"categorias_nuevas": []}

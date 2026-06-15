@@ -8,9 +8,10 @@ function AgentChat({ onClose }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isBarcode, setIsBarcode] = useState(false);
   const messagesEndRef = useRef(null);
-
-  console.log(input);
+  const keyTimesRef = useRef([]);
+  const inputRef = useRef(null);
 
   const [conversationHistory, setConversationHistory] = useState(() => {
     try {
@@ -29,7 +30,7 @@ function AgentChat({ onClose }) {
   const [initialized, setInitialized] = useState(false);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); // esto hace que cada vez que haya un mensaje nuevo baje hasta donde esta este
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   useEffect(() => {
@@ -57,13 +58,15 @@ function AgentChat({ onClose }) {
           const attrs = attrResp.data || [];
           if (attrs.length > 0) {
             const randomAttr = attrs[Math.floor(Math.random() * attrs.length)];
-            examples.push(`"Aumentame los de ${randomAttr.name} un 20%"`);
+            examples.push(
+              `"Aumentame los productos de ${randomAttr.name} un 20%"`,
+            );
           }
         }
 
         examples.push(`"Aumentame todos los productos un 15%"`);
 
-        const welcomeText = `¡Hola! Soy tu asistente de precios. Podes pedirme cosas como:\n\n${examples.map((e, i) => `${i + 1}. ${e}`).join("\n")}`;
+        const welcomeText = `¡Hola! Soy tu asistente de precios. Podes pedirme cosas como:\n\n${examples.map((e, i) => `${i + 1}. ${e}`).join("\n")}\n\nTambien podes escanear un codigo de barras y te muestro el producto.`;
 
         setMessages([{ id: 1, type: "assistant", text: welcomeText }]);
       } catch (error) {
@@ -107,9 +110,8 @@ function AgentChat({ onClose }) {
     const sentInput = input;
 
     setInput("");
+    setIsBarcode(false);
 
-    console.log("sent input", sentInput);
-    console.log("input", input);
     setLoading(true);
 
     try {
@@ -117,8 +119,6 @@ function AgentChat({ onClose }) {
         user: msg.user || "",
         assistant: msg.assistant || "",
       }));
-
-      console.log("mensaje: ", sentInput);
 
       const response = await axios.post(
         `${BASE_URL}/api/agent/chat`,
@@ -154,11 +154,6 @@ function AgentChat({ onClose }) {
       localStorage.setItem("agentChatHistory", JSON.stringify(newHistory));
 
       if (data.data && data.data.context) {
-        console.log("CONTEXTO: ", data.data.context);
-
-        // ME PARECE QUE ACA PODRIA AGREGARSE data.data.context DIRECTAMENTE AL STORAGE DEL CONTEXTO
-        // EN VEZ DE METERLO PRIMERO AL STATE DE CONTEXT Y LUEGO EJECUTAR EL USEEFECT
-
         setContext(data.data.context);
       }
     } catch (error) {
@@ -174,6 +169,38 @@ function AgentChat({ onClose }) {
       ]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    keyTimesRef.current.push(Date.now());
+    if (keyTimesRef.current.length > 30) keyTimesRef.current.shift();
+
+    if (e.key === "Enter" && /^\d{6,}$/.test(input)) {
+      const times = keyTimesRef.current;
+      if (times.length >= 6) {
+        const diffs = [];
+        for (let i = 1; i < times.length; i++) {
+          diffs.push(times[i] - times[i - 1]);
+        }
+        const avg = diffs.reduce((a, b) => a + b, 0) / diffs.length;
+        if (avg < 60) {
+          setIsBarcode(true);
+          setTimeout(() => setIsBarcode(false), 2500);
+        }
+      }
+      keyTimesRef.current = [];
+    }
+  };
+
+  const handleChange = (e) => {
+    const val = e.target.value;
+    setInput(val);
+    if (/^\d{6,}$/.test(val)) {
+      keyTimesRef.current.push(Date.now());
+      if (keyTimesRef.current.length > 30) keyTimesRef.current.shift();
+    } else {
+      setIsBarcode(false);
     }
   };
 
@@ -245,14 +272,21 @@ function AgentChat({ onClose }) {
       </div>
 
       <form className="chat-input-form" onSubmit={handleSendMessage}>
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Escribe tu mensaje aqui..."
-          disabled={loading}
-          className="chat-input"
-        />
+        <div className="input-wrapper">
+          <input
+            ref={inputRef}
+            type="text"
+            value={input}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+            placeholder="Escribe o escanea un codigo de barras..."
+            disabled={loading}
+            className={`chat-input ${isBarcode ? "barcode-scanner" : ""}`}
+          />
+          {isBarcode && (
+            <span className="barcode-badge">📷 Barcode detectado</span>
+          )}
+        </div>
         <button
           type="submit"
           disabled={loading || !input.trim()}

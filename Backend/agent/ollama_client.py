@@ -2,97 +2,45 @@ import os
 from dotenv import load_dotenv
 from langchain_ollama import OllamaLLM
 
-
 load_dotenv()
 
-DEFAULT_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:0.5b")
 OLLAMA_BASE_URL = "http://localhost:11434"
 
+_FAST_KWARGS = dict(temperature=0, num_predict=256)
+
+_llm_cache: dict[str, OllamaLLM] = {}
+
+def _cached(model: str) -> OllamaLLM:
+    if model not in _llm_cache:
+        _llm_cache[model] = OllamaLLM(model=model, base_url=OLLAMA_BASE_URL, **_FAST_KWARGS)
+    return _llm_cache[model]
+
 def get_llm():
-    return OllamaLLM(
-        model=DEFAULT_MODEL,
-        base_url=OLLAMA_BASE_URL,
-    )
+    return _cached(os.getenv("OLLAMA_MODEL", "qwen2.5:0.5b"))
 
-# CUALIFIQUER INTENT 
-# Identifica la intencion del usuario y devuelva la accion que tiene que ejecutar este: ejemplo aumentar_precios, 
-# crear_categoria etc.
 def get_intent():
-    return OllamaLLM(
-        model="cualifiquer-intent",
-        base_url=OLLAMA_BASE_URL
-    )
+    return _cached("cualifiquer-intent")
 
-#CREATE PRODUCT
-# SIRVE PARA QUE EL MODELO EN BASE A UN PROMPT DEL USUARIO ME DEVUEVA LISTOS LOS CAMPOS 
-# PARA QUE YO PUEDA CREAR UN PRODUCTO
-# si uno de los campos para crear el producto es null: ejemplo: nombre del producto, barcode, descripcion, 
-# precio que tire null en un campo entonces despues con logica le digo que falta ese campo y que lo vuelva 
-# a ingresar y ahi si que cree el producto.
 def get_create_product():
-    return OllamaLLM(
-        model="create-product",
-        base_url=OLLAMA_BASE_URL
-    )
+    return _cached("create-product")
 
-#ATTRIBUTE EXTRACTOR
-#ESTE SE GENERA CUANDO SE CREA UN PRODUCTO Y ES PARA QUE DETECTE LOS ATRIBUTOS INGRESADOS Y 
-# GENERE LA CATEGORIA Y EL ATRIBUTO
 def get_attribute_extractor():
-    return OllamaLLM(
-        model="attribute-extractor", 
-        base_url=OLLAMA_BASE_URL
-    )
-
-#ATTRIBUTE CLASSIFIQUER
-#ESTE SE EJECUTA CUANDO EL USUARIO QUIERE AUMENTAR ALGO EL MODELO DEVUELVE EL ATRIBUTO, Y LA CATEGORIA PARA POSTERIORMENTE HACER EL AUMENTO
+    return _cached("attribute-extractor")
 
 def get_attribute_classifier():
-    return OllamaLLM(
-        model="attribute-classifier", 
-        base_url=OLLAMA_BASE_URL
-    )
+    return _cached("attribute-classifier")
 
-
-# ATTRIBUTE RESOLVER 
-# ESTE SE PODRIA USAR CUANDO CREAMOS UN ATRIBUTO, EJEMPLO "PLASTICO" Y LUEGO LE PASAMOS LOS PRODUCTOS Y CATEGORIAS PARA 
-# QUE DETERMINE QUE PRODUCTOS POSEEN ESE ATRIBUTO Y A QUE CATEGORIA PERTENECE ESE ATRIBUTO
-# o también se podria crear en el caso de que ya tengamos creados productos y categorias en la db y querramos pasarselo a este modelo para que determine que productos poseen ese atributo y a que categoria pertenece ese atributo
 def get_attribute_resolver():
-    return OllamaLLM(
-        model="attribute-resolver",
-        base_url=OLLAMA_BASE_URL
-    )
+    return _cached("attribute-resolver")
 
-
-# INCOMPLETE HANDLER
-#ESTE SE EJECUTA CUANDO EL USUARIO HACE UN PROMPT AL CUAL LE FALTA INFORMACION Y EL MODELO LE DA UNA RESPUESTA INDICANDOLE LO QUE HACE FALTA PARA REALIZAR UNA ACCION
 def get_incomplete_handler():
-    return OllamaLLM(
-        model="incomplet-handler",
-        base_url=OLLAMA_BASE_URL
-    )
+    return _cached("incomplet-handler")
 
-
-# INCREASE DETECTOR
-# DETECTA EL TIPO DE AUMENTO QUE EL USUARIO QUIERE HACER OSEA todos, por atributo, por producto
 def get_increase_detector():
-    return OllamaLLM(
-        model="increase-detector",
-        base_url=OLLAMA_BASE_URL
-    )
+    return _cached("increase-detector")
 
-# GENERAL CONSULTANT
-# RESPONDE LAS DUDAS DEL USUARIO EN MODO ASESOR FINANCIERO
 def get_general_consultant():
-    return OllamaLLM(
-        model="general-consultant",
-        base_url=OLLAMA_BASE_URL
-    )
+    return _cached("general-consultant")
 
-
-def create_categories_by_products(): 
-    return OllamaLLM(
-        model="create-categories-by-products",
-        base_url=OLLAMA_BASE_URL
-    )
+def create_categories_by_products():
+    return _cached("create-categories-by-products")
