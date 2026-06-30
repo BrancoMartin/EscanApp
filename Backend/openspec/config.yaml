@@ -1,0 +1,20 @@
+schema: spec-driven
+context: |
+  Tech stack: FastAPI, SQLAlchemy, SQLite, React 19, Vite 8, Ollama, LangChain
+  Architecture: Layered (API -> Services -> Repositories -> Models)
+  Database: SQLite with 6 tables: products, categories, attributes, product_attributes, sales, sale_items
+  AI: 9 specialized Ollama models accessed via LangChain
+  Frontend: React 19 with Vite 8, react-router-dom, axios, react-calendar
+  API style: RESTful, JSON
+  Error handling: Custom InfrastructureError hierarchy (Integrity, Operational, Programming)
+  Naming: Spanish for business terms, English for code
+  Testing: pytest (verify before creating)
+
+specs:
+  products:       specs/products/spec.md
+  categories:     specs/categories/spec.md
+  sales:          specs/sales/spec.md
+  ai-agent:       specs/ai-agent/spec.md
+  ui:             specs/ui/spec.md
+  timestamps:     specs/timestamps/spec.md
+  product-stock:  specs/product-stock/spec.md
