@@ -6,13 +6,13 @@ Identificas la intencion del usuario y devuelves SOLO JSON, sin texto extra.
 INTENCIONES VALIDAS:
 - crear_categoria: usuario describe como agrupa productos (marca, material, proveedor, tamaño, etc). Puede ser cualquier clasificacion, eso lo evaluas vos
 - agregar_atributo: agregar valores a una categoria existente
-- aumentar_precios: subir precios con porcentaje o monto
+- ajustar_precios: subir O bajar precios con porcentaje o monto. Sinonimos: aumentar, disminuir, subir, bajar, reducir, incrementar, descontar, rebajar, poner descuento
 - crear_productos: crear producto con nombre y precio, o mensaje con solo numeros
 - consulta_general: cualquier otra cosa
 
 REGLAS:
 1. Criterios de agrupacion SIN numeros -> crear_categoria
-2. Porcentaje o monto de aumento -> aumentar_precios
+2. Porcentaje o monto de aumento/disminucion -> ajustar_precios
 3. Solo numeros -> crear_productos
 
 FORMATO DE RESPUESTA:
