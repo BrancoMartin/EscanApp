@@ -1,7 +1,7 @@
-from sqlalchemy import Column, Integer, String, Float
+from sqlalchemy import Column, Integer, String, Float, DateTime
 from sqlalchemy.orm import relationship
+from datetime import datetime
 from Backend.database import Base
-# models/product.py
 
 
 class Product(Base):
@@ -12,6 +12,9 @@ class Product(Base):
     description = Column(String, nullable=True)
     price = Column(Float, nullable=False)
     barcode = Column(String, unique=True, nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+    stock = Column(Integer, nullable=False, default=0)
 
     sale_items = relationship("SaleItem", back_populates="product")
 

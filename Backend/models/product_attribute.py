@@ -1,5 +1,6 @@
-from sqlalchemy import Column, Integer, ForeignKey, UniqueConstraint
+from sqlalchemy import Column, Integer, ForeignKey, DateTime, UniqueConstraint
 from sqlalchemy.orm import relationship
+from datetime import datetime
 from Backend.database import Base
 
 class ProductAttribute(Base):
@@ -11,6 +12,7 @@ class ProductAttribute(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
     attribute_id = Column(Integer, ForeignKey("attributes.id"), nullable=False)
+    created_at = Column(DateTime, default=datetime.now)
 
     product = relationship("Product", back_populates="product_attributes")
     attribute = relationship("Attribute", back_populates="product_attributes")
