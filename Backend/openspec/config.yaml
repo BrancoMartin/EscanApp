@@ -9,6 +9,15 @@ context: |
   Error handling: Custom InfrastructureError hierarchy (Integrity, Operational, Programming)
   Naming: Spanish for business terms, English for code
   Testing: pytest (verify before creating)
+  Constraint:
+    - Existing code (brownfield): If the agent finds technologies, libraries,
+      functions, or classes in the current codebase that are NOT documented in
+      the user's Obsidian vault, it MUST stop and ask the user: "Delete it or
+      reimplement it using vault-documented alternatives?"
+    - New features: All new functionality MUST be built using ONLY frameworks,
+      languages, functions, classes, and libraries that exist in the user's
+      Obsidian notes. The agent MUST NOT introduce any resource not present
+      in the vault.
 
 specs:
   products:       specs/products/spec.md
