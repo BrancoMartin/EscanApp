@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from "react";
-import axios from "axios";
 import "./AgentChat.css";
 
 const BASE_URL = import.meta.env.PROD ? "" : "http://localhost:8000";
@@ -36,10 +35,10 @@ function AgentChat({ onClose }) {
   useEffect(() => {
     const buildWelcomeMessage = async () => {
       try {
-        const catResp = await axios.get(`${BASE_URL}/api/categories`);
-        const cats = catResp.data || [];
-        const prodResp = await axios.get(`${BASE_URL}/api/products/`);
-        const prods = prodResp.data || [];
+        const catResp = await fetch(`${BASE_URL}/api/categories`);
+        const cats = await catResp.json();
+        const prodResp = await fetch(`${BASE_URL}/api/products/`);
+        const prods = await prodResp.json();
 
         let examples = [];
 
@@ -52,10 +51,10 @@ function AgentChat({ onClose }) {
 
         if (cats.length > 0) {
           const randomCat = cats[Math.floor(Math.random() * cats.length)];
-          const attrResp = await axios.get(
+          const attrResp = await fetch(
             `${BASE_URL}/api/attributes?category_id=${randomCat.id}`,
           );
-          const attrs = attrResp.data || [];
+          const attrs = await attrResp.json();
           if (attrs.length > 0) {
             const randomAttr = attrs[Math.floor(Math.random() * attrs.length)];
             examples.push(
@@ -120,20 +119,23 @@ function AgentChat({ onClose }) {
         assistant: msg.assistant || "",
       }));
 
-      const response = await axios.post(
+      const response = await fetch(
         `${BASE_URL}/api/agent/chat`,
         {
-          message: sentInput,
-          conversation_history: conversationForBackend,
-          context: context,
-        },
-        {
+          method: "POST",
           headers: { "Content-Type": "application/json" },
-          timeout: 120000,
+          body: JSON.stringify({
+            message: sentInput,
+            conversation_history: conversationForBackend,
+            context: context,
+          }),
         },
       );
+      if (!response.ok) {
+        throw new Error("Error en la respuesta del servidor");
+      }
 
-      const data = response.data;
+      const data = await response.json();
 
       const assistantMessage = {
         id: Date.now() + 1,
