@@ -1,5 +1,4 @@
 import { useState } from "react";
-import axios from "axios";
 import Nav from "../Nav/nav.jsx";
 import "./AddProductOption.css";
 import addProductValidation from "./Validation.jsx";
@@ -52,20 +51,23 @@ function AddProductOption() {
       console.log("ENTRANDO A MANDAR LOS PRODUCTOS");
       try {
         console.log("MANDANDO DATOS PARA CREAR PRODUCTO");
-        const response = await axios.post(`${BASE_URL}/api/products/`, {
-          barcode,
-          name,
-          price,
-          description,
+        const response = await fetch(`${BASE_URL}/api/products/`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ barcode, name, price, description }),
         });
-        console.log("RESPUESTA", response.data);
-        setMessage(`Producto creado: ${response.data.product.name}`);
+        const data = await response.json();
+        if (!response.ok) {
+          throw { response: { data } };
+        }
+        console.log("RESPUESTA", data);
+        setMessage(`Producto creado: ${data.product.name}`);
         setBarcode("");
         setName("");
         setPrice("");
         setDescription("");
       } catch (err) {
-        setError(err.response?.data?.detail || "No se pudo crear el producto");
+        setError(err?.response?.data?.detail || "No se pudo crear el producto");
       }
     }
   };

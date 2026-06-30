@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
 import Nav from "../Nav/nav";
 import "./ScanProductsOption.css";
 
@@ -16,8 +15,9 @@ function ScanProductsOption() {
   useEffect(() => {
     const loadPending = async () => {
       try {
-        const response = await axios.get(`${BASE_URL}/api/sales/pending`);
-        if (response.data) setSale(response.data);
+        const response = await fetch(`${BASE_URL}/api/sales/pending`);
+        const data = await response.json();
+        if (data) setSale(data);
       } catch (err) {
         console.error("Error al cargar venta pendiente:", err);
       }
@@ -34,17 +34,21 @@ function ScanProductsOption() {
     console.log("HANDLE SCAN EJECUTANDOSE: barcode: ", barcode);
 
     try {
-      const response = await axios.get(
+      const response = await fetch(
         `${BASE_URL}/api/products/barcode/${encodeURIComponent(barcode)}`,
       );
+      const data = await response.json();
+      if (!response.ok) {
+        throw { response: { data } };
+      }
 
-      console.log("RESPUESTA ESCANEAR PRODUCTO", response.data);
+      console.log("RESPUESTA ESCANEAR PRODUCTO", data);
 
-      setSale(response.data);
+      setSale(data);
 
-      console.log("TOTAL PRICE", sale.total_price);
+      console.log("TOTAL PRICE", sale?.total_price);
     } catch (err) {
-      setError(err.response?.data?.detail || "No se pudo escanear el producto");
+      setError(err?.response?.data?.detail || "No se pudo escanear el producto");
     } finally {
       setLoading(false);
     }
@@ -52,35 +56,47 @@ function ScanProductsOption() {
 
   const HandleCloseSale = async () => {
     try {
-      const response = await axios.post(
+      const response = await fetch(
         `${BASE_URL}/api/sales/${sale.id}/close`,
+        { method: "POST" },
       );
-      console.log("RESPUESTA CERRAR VENTA", response.data);
+      const data = await response.json();
+      if (!response.ok) {
+        throw { response: { data } };
+      }
+      console.log("RESPUESTA CERRAR VENTA", data);
       setMessage("Venta cerrada exitosamente");
       setSale(false);
     } catch (err) {
-      setMessage(err.response?.data?.detail || "No se pudo cerrar la venta");
+      setMessage(err?.response?.data?.detail || "No se pudo cerrar la venta");
     }
   };
 
   const getSaleDetails = async (saleId) => {
     if (!saleId) return;
     try {
-      const response = await axios.get(`${BASE_URL}/api/sales/${saleId}`);
-      setSale(response.data);
+      const response = await fetch(`${BASE_URL}/api/sales/${saleId}`);
+      const data = await response.json();
+      if (!response.ok) {
+        throw { response: { data } };
+      }
+      setSale(data);
     } catch (err) {
-      setError(err.response?.data?.detail || "No se pudo cargar la venta");
+      setError(err?.response?.data?.detail || "No se pudo cargar la venta");
     }
   };
 
   const handleCancelSale = async () => {
     console.log("CANCELANDO VENTA COMPLETA: ", sale.id);
 
-    const response = await axios.delete(`${BASE_URL}/api/sales/${sale.id}`);
+    const response = await fetch(`${BASE_URL}/api/sales/${sale.id}`, {
+      method: "DELETE",
+    });
+    const data = await response.json();
     setSale(false);
     setBarcode("");
 
-    console.log("RESPUESTA CANCELAR VENTA", response.data);
+    console.log("RESPUESTA CANCELAR VENTA", data);
   };
 
   const handleCancelProduct = async (item) => {
@@ -93,15 +109,20 @@ function ScanProductsOption() {
     } else {
       console.log("CANCELANDO ITEM VENTA: ", item.id);
       try {
-        const response = await axios.put(
+        const response = await fetch(
           `${BASE_URL}/api/sales/${sale.id}/items/${item.id}`,
+          { method: "PUT" },
         );
-        getSaleDetails(sale.id); // Actualiza los detalles de la venta después de cancelar el producto
-        console.log("RESPUESTA CANCELAR PRODUCTO", response.data.message);
-        setMessageCancel(response.data.message);
+        const data = await response.json();
+        if (!response.ok) {
+          throw { response: { data } };
+        }
+        getSaleDetails(sale.id);
+        console.log("RESPUESTA CANCELAR PRODUCTO", data.message);
+        setMessageCancel(data.message);
       } catch (err) {
         setMessageCancel(
-          err.response?.data?.detail || "No se pudo cancelar el producto",
+          err?.response?.data?.detail || "No se pudo cancelar el producto",
         );
       }
     }

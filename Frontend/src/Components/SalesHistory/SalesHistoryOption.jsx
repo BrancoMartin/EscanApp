@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import axios from "axios";
+import { useState } from "react";
 import Nav from "../Nav/nav";
 import "./SalesHistoryOption.css";
 import Calendar from "react-calendar";
@@ -22,15 +21,16 @@ function SalesHistoryOption() {
     console.log("FECHA PARSEADA: ", dateParceada);
 
     try {
-      const response = await axios.get(
+      const response = await fetch(
         `${BASE_URL}/api/sales/date/${dateParceada}`,
       );
+      const data = await response.json();
 
-      console.log("RESPUESTA DE LA API: ", response.data);
+      console.log("RESPUESTA DE LA API: ", data);
 
       setLoading(false);
 
-      setBuys(response.data);
+      setBuys(data);
       setModalAbierto(true);
     } catch (err) {
       setError("Error al cargar las ventas.", err);

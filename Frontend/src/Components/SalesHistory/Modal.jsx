@@ -1,5 +1,3 @@
-import React, { useEffect, useState } from "react";
-import axios from "axios";
 import "./Modal.css";
 
 const BASE_URL = import.meta.env.PROD ? "" : "http://localhost:8000";
