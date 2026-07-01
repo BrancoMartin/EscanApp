@@ -157,6 +157,81 @@ El sistema SHALL utilizar 9 modelos Ollama especializados, cada uno con un promp
 - **WHEN** el sistema inicia el agente
 - **THEN** todos los modelos están disponibles para ser invocados según la intención detectada
 
+### Requirement: Fábrica de LLM en ollama_client.py
+
+El archivo `ollama_client.py` SHALL definir una función por cada modelo, y cada función SHALL instanciar `OllamaLLM` directamente con su modelo y `OLLAMA_BASE_URL`, sin usar helpers como `_cached()`.
+
+#### Scenario: Formato de cada función
+
+- **WHEN** se define una función para un modelo
+- **THEN** la función SHALL tener este formato:
+
+```python
+def create_categories_by_products():
+    return OllamaLLM(
+        model=CreateCategories,
+        base_url=OLLAMA_BASE_URL
+    )
+```
+
+- **AND** cada función usa el identificador del modelo correspondiente (e.g. `CreateCategories`, `Intent`, `CreateProduct`, `AttributeExtractor`, `AttributeClassifier`, `AttributeResolver`, `IncompleteHandler`, `IncreaseDetector`, `GeneralConsultant`)
+- **AND** todas las funciones reciben el mismo `base_url` desde la variable `OLLAMA_BASE_URL`
+- **AND** ninguna función SHALL usar el patrón `_cached("...")`
+
+### Requirement: Limpieza de valores nulos en respuestas de modelos
+
+Los model files SHALL limpiar valores nulos/vacíos de las listas retornadas por los modelos usando una lista `SINONIMOS_NULL` con un bucle `for` explícito. NO SHALL usar `frozenset` con list comprehension.
+
+#### Scenario: Formato correcto de limpieza
+
+- **WHEN** un modelo retorna una lista con valores que pueden ser nulos
+- **THEN** la función SHALL usar este formato:
+
+```python
+SINONIMOS_NULL = [
+    "null",
+    "none",
+    "nada",
+    "vacio",
+    "vacío",
+    "ninguno",
+    "ninguna",
+    "nil",
+    "empty",
+    "blank",
+    "unknown",
+    "desconocido",
+    "na",
+    "n/a",
+    "-"
+]
+
+categorias_validas = []
+
+for categoria in data.get("categorias_nuevas", []):
+    nombre = categoria.get("nombre", "").strip().lower()
+
+    if nombre not in SINONIMOS_NULL and nombre != "":
+        categorias_validas.append(categoria)
+
+data["categorias_nuevas"] = categorias_validas
+
+return data
+```
+
+- **AND** NO SHALL usar `frozenset` con list comprehension como este patrón:
+
+```python
+# PROHIBIDO
+_NULL_SYNONYMS = frozenset({ 'null', 'none', ... })
+cats = data.get("categorias_nuevas", [])
+if isinstance(cats, list):
+    data["categorias_nuevas"] = [
+        c for c in cats if isinstance(c, dict) and isinstance(c.get("nombre"), str)
+        and c["nombre"].strip().lower() not in _NULL_SYNONYMS
+    ]
+```
+
 ### Requirement: Performance — respuesta máxima en 3.5 segundos
 
 El sistema SHALL completar cualquier interacción del agente IA en un máximo de 3.5 segundos, desde que el usuario envía el mensaje hasta que recibe la respuesta.

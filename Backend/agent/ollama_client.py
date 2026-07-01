@@ -25,6 +25,8 @@ def get_create_product():
     return _cached("create-product")
 
 def get_attribute_extractor():
+    print("ENTRANDO A LA FUNCION GET ATTRIBUTE BY EXTRACTOR PARA EJECUTAR EL ATTRIBUTE EXTRACTOR")
+
     return _cached("attribute-extractor")
 
 def get_attribute_classifier():
@@ -43,4 +45,6 @@ def get_general_consultant():
     return _cached("general-consultant")
 
 def create_categories_by_products():
+
+    print("ENTRANDO A LA FUNCION CREATE CATEGORIES BY PRODUCTS PARA EJECUTAR EL MODELFILE")
     return _cached("create-categories-by-products")

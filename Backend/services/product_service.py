@@ -41,7 +41,7 @@ class ProductService:
        
         get_product = self.repo.get_by_name_and_description(name, description)
 
-        print(get_product)
+        print("HAY PRODUCTOS CON ESE NOMBRE Y DESCRIPCION EN LA BASE DE DATOS? ",get_product)
 
         if get_product: 
             raise ValueError("Ya existe un producto con ese nombre y descripcion")

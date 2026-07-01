@@ -1,0 +1,10 @@
+Buscando frontend en: C:\Users\diego\OneDrive\Escritorio\PROYECTOS\BarcodePaymentSystem\BarcodePaymentSystem\Frontend\dist
+Existe: True
+Montando ruta para frontend
+INFO:     127.0.0.1:50759 - "GET /health HTTP/1.1" 200 OK
+Servidor corriendo en modo desarrollo. Presioná Ctrl+C para detener.
+INFO:     127.0.0.1:61780 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57466 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58928 - "OPTIONS /api/products/ HTTP/1.1" 200 OK
+Intentando crear producto con datos: barcode='1793291273981232' name='Dado' price=4000.0 description='blanco y negro, marca matter'
+INFO:     127.0.0.1:58928 - "POST /api/products/ HTTP/1.1" 500 Internal Server Error
