@@ -21,6 +21,7 @@ class ProductInput(BaseModel):
     name: str
     price: float
     description: Optional[str] = None
+    proovedor: Optional[str] = None
 
 # List all products
 @router.get("/")
@@ -55,14 +56,14 @@ def create(data: ProductInput, service: ProductService = Depends(get_product_ser
            service_attribute: AttributeService = Depends(get_attribute_service),  service_product_attribute: ProductAttributeService = Depends(get_product_attribute_service)):
     try:
         print("Intentando crear producto con datos:", data)
-        productCreate = service.create(data.barcode, data.name.lower(), data.price, data.description.lower())
+        productCreate = service.create(data.barcode, data.name.lower(), data.price, data.description.lower(), data.proveedor.lower())
 
         categories = service_category.get_all()
 
         created_categories = create_categories(
             nombre=data.name.lower(),
             descripcion=data.description.lower(),
-            proveedor=None
+            proveedor = data.proveedor.lower() 
         )
 
         print("created_categories:", created_categories)
@@ -79,7 +80,7 @@ def create(data: ProductInput, service: ProductService = Depends(get_product_ser
         result = attribute_extractor(
             nombre=data.name.lower(),
             descripcion=data.description.lower(),
-            proveedor=None,
+            proveedor=data.proveedor.lower(),
             categoria=category_names
         )
 

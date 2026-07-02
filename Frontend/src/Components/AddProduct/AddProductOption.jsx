@@ -51,10 +51,17 @@ function AddProductOption() {
       console.log("ENTRANDO A MANDAR LOS PRODUCTOS");
       try {
         console.log("MANDANDO DATOS PARA CREAR PRODUCTO");
+        console.log("PROOVEDOR: ", proveedor);
         const response = await fetch(`${BASE_URL}/api/products/`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ barcode, name, price, description }),
+          body: JSON.stringify({
+            barcode,
+            name,
+            price,
+            description,
+            proveedor,
+          }),
         });
         const data = await response.json();
         if (!response.ok) {

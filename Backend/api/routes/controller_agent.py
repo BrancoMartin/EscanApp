@@ -178,7 +178,8 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
                 name=nombre,
                 price=float(product_data["precio"]),
                 barcode=product_data["barcode"],
-                description=product_data.get("descripcion")
+                description=product_data.get("descripcion"),
+                proveedor=product_data.get("proveedor")
             )
             db.add(product)
             db.commit()
