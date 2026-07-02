@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("CurrencyMicroservice")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+0a13a6145cb0056c3f472b986a20fa8505d46b4d")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+130a0f7e7d8b53f842670236d47b2a09e2e192a8")]
 [assembly: System.Reflection.AssemblyProductAttribute("CurrencyMicroservice")]
 [assembly: System.Reflection.AssemblyTitleAttribute("CurrencyMicroservice")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

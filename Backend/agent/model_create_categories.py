@@ -34,10 +34,10 @@ def create_categories(nombre, descripcion, proveedor):
         data = json.loads(clean)
         cats = data.get("categorias_nuevas", [])
         categorias_validas = []
-        for categoria in data.get("categorias_nuevas", []):
-            nombre = categoria.get("nombre", "").strip().lower()
-
-            if nombre not in SINONIMOS_NULL and nombre != "":
+        print("Categorias: ", cats)
+        for categoria in cats:
+            print("CATEGORIA: ", categoria)
+            if categoria not in SINONIMOS_NULL and categoria != "":
                 categorias_validas.append(categoria)
 
         data["categorias_nuevas"] = categorias_validas
