@@ -41,6 +41,8 @@ def create_categories(nombre, descripcion, proveedor):
                 categorias_validas.append(categoria)
 
         data["categorias_nuevas"] = categorias_validas
+
+        print("data['categorias_nuevas']: ", data["categorias_nuevas"])
         return data
     except Exception as e:
         import traceback

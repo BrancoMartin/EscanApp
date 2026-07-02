@@ -86,13 +86,19 @@ def create(data: ProductInput, service: ProductService = Depends(get_product_ser
         print("attribute_extractor result:", result)
 
         # 3. Persistir en BD
-        attributes = result if isinstance(result, list) else result.get("atributos", [])
-        print("ATTRIBUTOS", attributes)
+        attributes = result if type(result) is list else result.get("atributos", [])
+        print("ATTRIBUTOS en controller products", attributes)
         for attr in attributes:
+            print("attr['categoria']: ", attr["categoria"])
             category = service_category.get_by_name(attr["categoria"].lower())
+
             if not category:
+                #ACA PODRIA CREARLA EN CASO DE QUE NO EXISTA
                 print(f"ERROR: Categoria '{attr['categoria'].lower()}' no encontrada")
                 continue
+
+            print("attr['valor']: ", attr["valor"])
+
             attribute_obj = service_attribute.get_or_create_attribute(category.id, attr["valor"].lower())
             product = service.get_by_name(data.name.lower())
             product_attribute = service_product_attribute.get_or_create(product.id, attribute_obj.id)

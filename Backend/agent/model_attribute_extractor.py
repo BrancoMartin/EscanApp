@@ -34,12 +34,13 @@ def attribute_extractor(nombre, descripcion, categoria, proveedor):
         
         clean = response.strip().replace("```json", "").replace("```", "").strip()
         data = json.loads(clean)
-        atributos_validos = []
-        for attributes in data.get("categorias_nuevas", []): 
-            nombre = categoria.get("nombre", "").strip().lower()
+        print("ATRIBUTOS: ", data)
 
-            if nombre not in SINONIMOS_NULL and nombre != "":
-                atributos_validos.append(categoria)
+        for d in data: 
+            atributte = d.get("valor", "").strip().lower()
+            print("ATRIBUTO", atributte)
+            if atributte not in SINONIMOS_NULL and atributte != "":
+                d["valor"] = atributte
         return data
     except Exception as e:
         print(f"[attr_extract] Error: {e}")
