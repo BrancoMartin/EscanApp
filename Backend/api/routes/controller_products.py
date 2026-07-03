@@ -21,7 +21,7 @@ class ProductInput(BaseModel):
     name: str
     price: float
     description: Optional[str] = None
-    proovedor: Optional[str] = None
+    proveedor: Optional[str] = None
 
 # List all products
 @router.get("/")
@@ -60,10 +60,13 @@ def create(data: ProductInput, service: ProductService = Depends(get_product_ser
 
         categories = service_category.get_all()
 
+        category_names = [cat.name.lower() if cat.name else cat.name for cat in categories]
+
         created_categories = create_categories(
             nombre=data.name.lower(),
             descripcion=data.description.lower(),
-            proveedor = data.proveedor.lower() 
+            proveedor = data.proveedor.lower(),
+            categorias_existentes=category_names
         )
 
         print("created_categories:", created_categories)

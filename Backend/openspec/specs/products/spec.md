@@ -71,3 +71,16 @@ El sistema SHALL extraer atributos del nombre y descripción del producto usando
 - **THEN** el sistema invoca attribute_extractor para extraer atributos
 - **AND** crea las categorías y atributos que no existan
 - **AND** asocia los atributos al producto mediante ProductAttribute
+
+#### Scenario: Proveedor inferido desde campo dedicado
+- **WHEN** se crea un producto con el campo proveedor informado
+- **THEN** el sistema trata `proveedor` como una categoría de atributo del producto
+- **AND** crea la categoría `proveedor` si no existe
+- **AND** crea u obtiene un atributo cuyo nombre sea el valor ingresado en el campo proveedor
+- **AND** el wrapper del agente garantiza este atributo aunque el modelo de IA omita proveedor en la respuesta
+- **AND** asocia ese atributo al producto mediante ProductAttribute
+
+#### Scenario: Proveedor no informado
+- **WHEN** se crea un producto sin proveedor válido
+- **THEN** el sistema no crea la categoría `proveedor`
+- **AND** no asocia atributos de proveedor al producto

@@ -29,7 +29,7 @@ class ProductService:
     
 
 
-    def create(self, barcode: str, name: str, price: float, description: str = None) -> Product:
+    def create(self, barcode: str, name: str, price: float, description: str = None, proveedor: str = None) -> Product:
         if not barcode or barcode.strip() == "":
             raise ValueError("El codigo de barras es obligatorio")
         if not name or name.strip() == "":
@@ -46,7 +46,7 @@ class ProductService:
         if get_product: 
             raise ValueError("Ya existe un producto con ese nombre y descripcion")
 
-        product = Product(name=name.lower(), description=description.lower(), price=price, barcode=barcode)
+        product = Product(name=name.lower(), description=description.lower(), price=price, barcode=barcode, proveedor=proveedor)
         response = self.repo.create(product)
 
         return {

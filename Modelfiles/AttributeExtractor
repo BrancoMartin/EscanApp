@@ -23,9 +23,23 @@ Dado un `nombre`, una `descripción`, un `proveedor` y una lista de `categorias_
 
 5. **Tipo genérico**
    - Asignar una categoría más amplia cuando sea posible (ej.: “Martillo” → tipo = “herramienta”).
-   
+    
 
-6. **Atributos adicionales**
+6. **Proveedor**
+   - Si el campo `proveedor` viene informado y `categorias_existentes` contiene `proveedor`, devolver obligatoriamente un atributo con categoria `proveedor` y valor igual al valor recibido en el campo `proveedor`.
+   - El valor del proveedor debe salir del campo `proveedor`, no del `nombre` ni de la `descripción`.
+   - No inferir proveedor desde textos ambiguos.
+   - No incluir `proveedor` si el campo está vacío o es “None”, “null”, “n/a”, “desconocido” o similar.
+
+   Ejemplo:
+   proveedor="Distribuidora Norte"
+   categorias_existentes=["marca", "proveedor"]
+
+   Debe incluir:
+   {"categoria":"proveedor","valor":"Distribuidora Norte"}
+
+
+7. **Atributos adicionales**
    - Solo cuando el valor sea claro e inferible.
    - No usar valores por defecto (“general”, “none”, “N/A”, etc.).}
 
@@ -35,6 +49,7 @@ Dado un `nombre`, una `descripción`, un `proveedor` y una lista de `categorias_
 **Restricciones**
 
 - No incluir el `proveedor` si está vacío o es “None”.
+- Si `proveedor` viene informado y existe la categoria `proveedor`, incluirlo como atributo.
 - El JSON debe contener únicamente pares `{"categoria": "...", "valor": "..."}`.
 - Si no existen atributos válidos, responder con `[]`.
 - No hace falta que todas las categorias tengan un atributo
@@ -49,9 +64,21 @@ Dado un `nombre`, una `descripción`, un `proveedor` y una lista de `categorias_
  {"categoria":"color","valor":"…"},
  {"categoria":"tipo","valor":"…"},
  {"categoria":"…","valor":"…"}]
+```
+
+**Ejemplo con proveedor**
+
+Entrada:
+nombre="Gaseosa"
+descripcion="botella 2L"
+proveedor="Distribuidora Norte"
+categorias_existentes=["proveedor"]
+
+Salida:
+[{"categoria":"proveedor","valor":"Distribuidora Norte"}]
+"""
 
 PARAMETER temperature 0
 PARAMETER num_predict 150
 PARAMETER top_k 10
 PARAMETER top_p 0.5
-```

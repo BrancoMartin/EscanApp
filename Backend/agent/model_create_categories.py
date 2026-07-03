@@ -21,14 +21,15 @@ SINONIMOS_NULL = [
 ]
 
 
-def create_categories(nombre, descripcion, proveedor):
+def create_categories(nombre, descripcion, proveedor, categorias_existentes=None):
     print("ENTRANDO AL MODEL_CREATE_CATEGORIES")
+    print("PROVEEDOR: ", proveedor)
     llm = create_categories_by_products()
-    template = "\nnombre: {nombre}\ndescripcion: {descripcion}\nproveedor: {proveedor}\n\nCrea categorias de atributo de ESTE producto especifico."
-    prompt = PromptTemplate(input_variables=["nombre", "descripcion", "proveedor"], template=template)
+    template = "\nnombre: {nombre}\ndescripcion: {descripcion}\nproveedor: {proveedor}\ncategorias_existentes: {categorias_existentes}\n\nCrea categorias de atributo de ESTE producto especifico."
+    prompt = PromptTemplate(input_variables=["nombre", "descripcion", "proveedor", "categorias_existentes"], template=template)
     chain = prompt | llm
     try:
-        response = chain.invoke({"nombre": nombre, "descripcion": descripcion, "proveedor": proveedor})
+        response = chain.invoke({"nombre": nombre, "descripcion": descripcion, "proveedor": proveedor, "categorias_existentes": categorias_existentes or []})
         print(f"[DEBUG] Respuesta cruda del modelo: {response}")
         clean = response.strip().replace("```json", "").replace("```", "").strip()
         data = json.loads(clean)
@@ -37,8 +38,20 @@ def create_categories(nombre, descripcion, proveedor):
         print("Categorias: ", cats)
         for categoria in cats:
             print("CATEGORIA: ", categoria)
-            if categoria not in SINONIMOS_NULL and categoria != "":
-                categorias_validas.append(categoria)
+            nombre_categoria = str(categoria).strip().lower()
+            if nombre_categoria not in SINONIMOS_NULL and nombre_categoria != "" and nombre_categoria not in categorias_validas:
+                categorias_validas.append(nombre_categoria)
+
+        proveedor_valido = str(proveedor or "").strip().lower()
+        categorias_actuales = [str(categoria).strip().lower() for categoria in (categorias_existentes or [])]
+
+        if (
+            proveedor_valido not in SINONIMOS_NULL
+            and proveedor_valido != ""
+            and "proveedor" not in categorias_actuales
+            and "proveedor" not in categorias_validas
+        ):
+            categorias_validas.append("proveedor")
 
         data["categorias_nuevas"] = categorias_validas
 

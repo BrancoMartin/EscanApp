@@ -17,3 +17,6 @@ build/
 *.db
 *.zip
 *.exe
+
+# Graphify generated files
+graphify-out/

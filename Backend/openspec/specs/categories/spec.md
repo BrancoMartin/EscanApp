@@ -80,6 +80,14 @@ El sistema SHALL permitir listar atributos, opcionalmente filtrados por categor�
 
 El servicio de categorías SHALL proporcionar un método get_or_create que busque por nombre y cree la categoría si no existe.
 
+#### Scenario: Proveedor como categoría de atributo
+
+- **WHEN** se crea un producto con el campo proveedor informado y la categoría `proveedor` no existe
+- **THEN** el sistema crea la categoría `proveedor`
+- **AND** la creación de la categoría `proveedor` SHALL estar garantizada por el wrapper del agente aunque el modelo de IA omita esa categoría
+- **AND** el nombre real del proveedor no se guarda como categoría
+- **AND** el nombre real del proveedor se guarda como atributo dentro de la categoría `proveedor`
+
 #### Scenario: Categoría existente
 
 - **WHEN** se invoca get_or_create_category con un nombre existente, porque el usuario le escribe al agente de ia que le cree la categoria con el nombre '{category}' y la categoria esta en la base de datos

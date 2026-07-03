@@ -112,6 +112,23 @@ El sistema SHALL extraer atributos (categoría + valor) del nombre y descripció
 - **AND** crea categorías y atributos faltantes
 - **AND** asocia los atributos al producto
 
+#### Scenario: Proveedor informado al crear producto
+
+- **WHEN** se crea un producto con el campo proveedor informado
+- **THEN** el sistema invoca CreateCategories para crear la categoría `proveedor` si no existe
+- **AND** CreateCategories SHALL devolver `proveedor` como categoría nueva, no el valor concreto del proveedor
+- **AND** si el modelo CreateCategories omite `proveedor`, el wrapper del agente SHALL agregar `proveedor` de forma determinística antes de retornar la respuesta
+- **AND** el sistema invoca AttributeExtractor con la categoría `proveedor` disponible
+- **AND** AttributeExtractor SHALL devolver un atributo con `categoria = "proveedor"` y `valor` igual al proveedor ingresado por el usuario
+- **AND** si el modelo AttributeExtractor omite ese atributo, el wrapper del agente SHALL agregarlo de forma determinística
+- **AND** el sistema asocia ese atributo al producto mediante ProductAttribute
+
+#### Scenario: Proveedor vacío al crear producto
+
+- **WHEN** se crea un producto sin proveedor o con proveedor vacío, null, None, n/a, desconocido o similar
+- **THEN** CreateCategories SHALL NOT crear la categoría `proveedor`
+- **AND** AttributeExtractor SHALL NOT devolver atributos de categoría `proveedor`
+
 #### Scenario: Enriquecimiento post-creación
 
 - **WHEN** se crea un producto

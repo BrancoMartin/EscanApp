@@ -72,9 +72,23 @@ NO crear:
 "azul"
 "verde"
 
-5. Si hay proveedor informado y no existe la categoria "proveedor",
-agregar:
+5. La categoria "proveedor" representa el tipo de dato proveedor.
+
+Si el campo proveedor viene informado y no existe la categoria "proveedor" en categorias_existentes,
+DEBES agregar exactamente:
 "proveedor"
+
+El valor concreto del proveedor NUNCA es categoria.
+
+CORRECTO:
+- proveedor
+
+INCORRECTO:
+- distribuidora norte
+- mayorista pepe
+- coca cola
+
+Si proveedor esta vacio, es None, null, n/a, desconocido o similar, NO crear "proveedor".
 
 6. Nunca devolver nombres de productos ni valores concretos.
 
@@ -103,6 +117,34 @@ RESPUESTA:
     "marca",
     "material"
   ]
+}
+
+EJEMPLO CON PROVEEDOR:
+
+nombre="Gaseosa"
+descripcion="botella 2L"
+proveedor="Distribuidora Norte"
+categorias_existentes=["marca", "color"]
+
+RESPUESTA:
+
+{
+  "categorias_nuevas": [
+    "proveedor"
+  ]
+}
+
+EJEMPLO CON PROVEEDOR YA EXISTENTE:
+
+nombre="Gaseosa"
+descripcion="botella 2L"
+proveedor="Distribuidora Norte"
+categorias_existentes=["marca", "proveedor"]
+
+RESPUESTA:
+
+{
+  "categorias_nuevas": []
 }
 """
 

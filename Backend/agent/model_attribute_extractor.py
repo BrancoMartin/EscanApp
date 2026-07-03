@@ -41,6 +41,19 @@ def attribute_extractor(nombre, descripcion, categoria, proveedor):
             print("ATRIBUTO", atributte)
             if atributte not in SINONIMOS_NULL and atributte != "":
                 d["valor"] = atributte
+
+        proveedor_valido = str(proveedor or "").strip().lower()
+        categorias_existentes = [str(cat).strip().lower() for cat in (categoria or [])]
+        tiene_proveedor = any(str(attr.get("categoria", "")).strip().lower() == "proveedor" for attr in data)
+
+        if (
+            proveedor_valido not in SINONIMOS_NULL
+            and proveedor_valido != ""
+            and "proveedor" in categorias_existentes
+            and not tiene_proveedor
+        ):
+            data.append({"categoria": "proveedor", "valor": proveedor_valido})
+
         return data
     except Exception as e:
         print(f"[attr_extract] Error: {e}")

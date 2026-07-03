@@ -10,6 +10,7 @@ class Product(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     name = Column(String, nullable=False, index=True)
     description = Column(String, nullable=True)
+    proveedor = Column(String, nullable=True, default=None)
     price = Column(Float, nullable=False)
     barcode = Column(String, unique=True, nullable=False, index=True)
     created_at = Column(DateTime, default=datetime.now)
