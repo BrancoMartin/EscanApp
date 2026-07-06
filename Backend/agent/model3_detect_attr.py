@@ -9,7 +9,7 @@ _NULL_SYNONYMS = frozenset({
 
 
 def detect_category_and_value(value: str, existing_categories: list) -> dict:
-    cats_str = ", ".join(c["name"] if isinstance(c, dict) else c for c in existing_categories) if existing_categories else ""
+    cats_str = ", ".join(c["name"] if type(c) == dict else c for c in existing_categories) if existing_categories else ""
     if not cats_str:
         return {"categoria_inferida": value, "valor": value, "categoria_existe": False}
 
@@ -25,9 +25,9 @@ def detect_category_and_value(value: str, existing_categories: list) -> dict:
             return {"categoria_inferida": None, "valor": value, "categoria_existe": False}
         cat_inf = data.get("categoria_inferida")
         val = data.get("valor")
-        if not isinstance(cat_inf, str) or cat_inf.strip().lower() in _NULL_SYNONYMS:
+        if type(cat_inf) != str or cat_inf.strip().lower() in _NULL_SYNONYMS:
             data["categoria_inferida"] = None
-        if not isinstance(val, str) or val.strip().lower() in _NULL_SYNONYMS:
+        if type(val) != str or val.strip().lower() in _NULL_SYNONYMS:
             data["valor"] = value
         return data
     except Exception as e:

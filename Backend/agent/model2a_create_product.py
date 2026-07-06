@@ -19,12 +19,12 @@ def create_product_with_attributes(user_prompt: str, existing_categories: list) 
         clean = response.strip().replace("```json", "").replace("```", "").strip()
         data = json.loads(clean)
         atributos = data.get("atributos_inferidos", [])
-        if isinstance(atributos, list):
+        if type(atributos) == list:
             data["atributos_inferidos"] = [
                 a for a in atributos
-                if isinstance(a, dict)
-                and isinstance(a.get("categoria"), str) and a["categoria"].strip().lower() not in _NULL_SYNONYMS
-                and isinstance(a.get("valor"), str) and a["valor"].strip().lower() not in _NULL_SYNONYMS
+                if type(a) == dict
+                and type(a.get("categoria")) == str and a["categoria"].strip().lower() not in _NULL_SYNONYMS
+                and type(a.get("valor")) == str and a["valor"].strip().lower() not in _NULL_SYNONYMS
             ]
         return data
     except Exception as e:

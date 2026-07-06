@@ -78,7 +78,7 @@ class CategoryService:
 
         if not category: 
             created = self.create(name_category)
-            if isinstance(created, dict):
+            if type(created) == dict:
                 return self.repo.get_by_id(created["category"]["id"])
             return created
 

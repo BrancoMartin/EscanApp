@@ -32,7 +32,7 @@ _NULL_SYNONYMS = frozenset({
 })
 
 def _is_valid_str(v):
-    return isinstance(v, str) and v.strip().lower() not in _NULL_SYNONYMS
+    return type(v) == str and v.strip().lower() not in _NULL_SYNONYMS
 
 
 _pending_products: dict = {}
@@ -251,7 +251,7 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
 
         # --- Flujo normal: clasificar intent ---
         intent_result = detect_intent(user_message)
-        intent = intent_result.get("intent") if isinstance(intent_result, dict) else intent_result
+        intent = intent_result.get("intent") if type(intent_result) == dict else intent_result
 
         print(f"[AGENT] Intent: {intent}")
 

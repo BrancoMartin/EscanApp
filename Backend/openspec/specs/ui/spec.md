@@ -3,11 +3,11 @@
 ## Requirements
 
 ### Requirement: Navegación general
-El sistema SHALL mostrar una barra de navegación superior con enlaces a Inicio, Agregar producto, Escanear productos e Historial de ventas.
+El sistema SHALL mostrar una barra de navegación superior con enlaces a Inicio, Agregar producto, Escanear productos, Historial de ventas y Ventas de las últimas 24 hs.
 
 #### Scenario: Navegación visible en todas las páginas
 - **WHEN** el usuario navega a cualquier página
-- **THEN** la barra de navegación está presente con los 4 enlaces
+- **THEN** la barra de navegación está presente con los 5 enlaces
 
 #### Scenario: Navegación a Inicio
 - **WHEN** el usuario hace clic en "Inicio"
@@ -24,6 +24,10 @@ El sistema SHALL mostrar una barra de navegación superior con enlaces a Inicio,
 #### Scenario: Navegación a Historial de ventas
 - **WHEN** el usuario hace clic en "Historial de ventas"
 - **THEN** redirige a /sales-history
+
+#### Scenario: Navegación a Ventas de las últimas 24 hs
+- **WHEN** el usuario hace clic en "Ventas de las últimas 24 hs"
+- **THEN** redirige a /last-sales
 
 ### Requirement: Página de inicio
 La página de inicio SHALL mostrar el título "EscanApp" y tres botones principales: Agregar Producto, Historial de Ventas, Escanear Productos.
@@ -75,14 +79,14 @@ La pantalla de escaneo SHALL permitir ingresar un código de barras, mostrar el 
 - **THEN** el item se elimina o decrementa su cantidad
 - **AND** el ticket se actualiza
 
-### Requirement: Historial de ventas de las últimas 24 horas
-La pantalla de historial SHALL mostrar una tabla simple con todas las ventas realizadas durante las últimas 24 horas, siguiendo el patrón de implementación de `Proyecto_lector_de_codigo_barras/frontend/src/Components/SalesHistory`.
+### Requirement: Ventas de las últimas 24 horas
+La página de ventas recientes SHALL mostrar una tabla simple con todas las ventas realizadas durante las últimas 24 horas, siguiendo el patrón de implementación de `Proyecto_lector_de_codigo_barras/frontend/src/Components/SalesHistory`. Esta página es independiente del historial con calendario en `/sales-history`.
 
 #### Scenario: Carga inicial
-- **WHEN** el usuario navega a `/sales-history`
+- **WHEN** el usuario navega a `/last-sales`
 - **THEN** la pantalla carga automáticamente las ventas recientes desde `/api/sales/recent`
-- **AND** muestra el título "Historial de ventas"
-- **AND** muestra una descripción breve indicando que permite consultar ventas cerradas y revisar tickets
+- **AND** muestra el título "Ventas de las últimas 24 hs"
+- **AND** muestra una descripción breve indicando que muestra las ventas cerradas de las últimas 24 horas
 
 #### Scenario: Tabla con ventas recientes
 - **WHEN** la API retorna una lista con ventas recientes
@@ -105,8 +109,7 @@ La pantalla de historial SHALL mostrar una tabla simple con todas las ventas rea
 #### Implementation Notes
 - La implementación SHALL reutilizar la estructura visual del proyecto de referencia: `Nav`, `option-panel`, bloque `box-title`, tabla dentro de `history-table-wrapper`, y estilos de tabla con borde redondeado, sombra suave y scroll horizontal en pantallas chicas.
 - A diferencia del proyecto de referencia, este proyecto MUST usar `fetch` nativo para llamadas HTTP; no SHALL introducir `axios`.
-- La pantalla no SHALL usar calendario ni modal para esta funcionalidad de últimas 24 horas, salvo que se defina una funcionalidad separada en otra spec.
-- La ruta web SHALL mantenerse en `/sales-history` para no romper la navegación existente.
+- Esta pantalla no SHALL usar calendario ni modal; es una tabla simple que carga al entrar.
 
 ### Requirement: Panel de chat con agente IA
 El sistema SHALL mostrar un panel lateral de chat con el agente IA, accesible desde el botón flotante en la página de inicio.

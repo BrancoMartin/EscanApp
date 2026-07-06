@@ -242,9 +242,9 @@ return data
 # PROHIBIDO
 _NULL_SYNONYMS = frozenset({ 'null', 'none', ... })
 cats = data.get("categorias_nuevas", [])
-if isinstance(cats, list):
-    data["categorias_nuevas"] = [
-        c for c in cats if isinstance(c, dict) and isinstance(c.get("nombre"), str)
+if type(cats) == list:
+
+        c for c in cats if type(c) == dict and type(c.get("nombre")) == str
         and c["nombre"].strip().lower() not in _NULL_SYNONYMS
     ]
 ```

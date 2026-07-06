@@ -83,7 +83,7 @@ class AttributeService:
 
         if not existing: 
             created = self.create(attribute_name, category_id)
-            if isinstance(created, dict):
+            if type(created) == dict:
                 return self.repo.get_by_id(created["attribute"]["id"])
             return created
 

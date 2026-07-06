@@ -75,8 +75,21 @@ class SaleRepository(RepositoryBase[Sale]):
             return True
         return False
     
+    def get_recent_sales(self):
+        from datetime import datetime, timedelta
+        cutoff = datetime.now() - timedelta(hours=24)
+        sales = self.db.query(Sale).filter(Sale.created_at >= cutoff).order_by(desc(Sale.created_at)).all()
+        for sale in sales:
+            sale.items = self.db.query(SaleItem).filter(SaleItem.sale_id == sale.id).all()
+            for item in sale.items:
+                item.product = self.db.query(Product).filter(Product.id == item.product_id).first()
+        return sales
+
     def get_sales_by_date(self, date):
-        sales = self.db.query(Sale).filter(Sale.created_at == date).all()
+        from datetime import datetime, timedelta
+        start = datetime(date.year, date.month, date.day)
+        end = start + timedelta(days=1)
+        sales = self.db.query(Sale).filter(Sale.created_at >= start, Sale.created_at < end).all()
         for sale in sales:
             sale.items = self.db.query(SaleItem).filter(SaleItem.sale_id == sale.id).all()
             for item in sale.items:

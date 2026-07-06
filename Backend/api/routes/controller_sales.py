@@ -25,10 +25,13 @@ def get_pending(service: SaleService = Depends(get_sale_service)):
 @router.get("/")
 def get_all(service: SaleService = Depends(get_sale_service)):
     sales = service.get_all()
-    
-    print("Ventas obtenidas del servicio:", sales)  # Agrega este print para verificar los datos
-
     return sales
+
+
+# Recent sales (last 24 hours) - MUST be before /{sale_id}
+@router.get("/recent")
+def get_recent(service: SaleService = Depends(get_sale_service)):
+    return service.get_recent_sales()
 
 
 # Create a sale from item list

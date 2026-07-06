@@ -29,6 +29,10 @@ context: |
       languages, functions, classes, and libraries that exist in the user's
       Obsidian notes. The agent MUST NOT introduce any resource not present
       in the vault.
+    - Code style: El código NO DEBE usar `isinstance()` en ningún archivo.
+      En su lugar, usar validaciones con `if` normales como `if type(x) == list:`,
+      `if "key" in x:`, `if x is not None:` según corresponda.
+      Esta regla aplica a backend Python y frontend JavaScript por igual.
 
 specs:
   products:       specs/products/spec.md

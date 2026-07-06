@@ -23,7 +23,7 @@ class SaleService:
         return self._format_sale(pending_sale)
 
     def create(self, items: list):
-        sale = Sale(state="pending", total_price=0.0, created_at=date.today())
+        sale = Sale(state="pending", total_price=0.0, created_at=datetime.now())
         sale = self.repo.create(sale)
         total = 0.0
         for item_data in items:
@@ -79,7 +79,7 @@ class SaleService:
             return {"error": "Product not found"}
         pending_sale = self.repo.get_pending_sale()
         if not pending_sale:
-            pending_sale = Sale(state="pending", total_price=0.0, created_at=date.today())
+            pending_sale = Sale(state="pending", total_price=0.0, created_at=datetime.now())
             pending_sale = self.repo.create(pending_sale)
         existing_item = self.repo.get_item_by_sale_and_product(pending_sale.id, product.id)
         if existing_item:
@@ -117,7 +117,7 @@ class SaleService:
             "id": sale.id,
             "state": sale.state,
             "total_price": sale.total_price,
-            "created_at": sale.created_at.strftime("%d/%m/%Y"),
+            "created_at": sale.created_at.strftime("%d/%m/%Y %H:%M"),
             "items": items,
         }
 
@@ -130,6 +130,10 @@ class SaleService:
             return {"error": "Sale not found"}
         self.repo.delete(sale)
         return {"success": True}
+
+    def get_recent_sales(self):
+        sales = self.repo.get_recent_sales()
+        return [self._format_sale(s) for s in sales]
 
     def get_sales_by_date(self, date_str: str):
         try:
