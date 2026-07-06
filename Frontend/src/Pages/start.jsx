@@ -26,13 +26,15 @@ function Start() {
       </div>
 
       <div className="agent-button-container">
-        <button
-          className="agent-button"
-          onClick={() => setShowAgent(!showAgent)}
-          title="Hablá con nuestro agente para ajustar precios"
-        >
-          <span className="agent-icon">🤖</span>
-        </button>
+        {!showAgent && (
+          <button
+            className="agent-button"
+            onClick={() => setShowAgent(!showAgent)}
+            title="Hablá con nuestro agente para ajustar precios"
+          >
+            <span className="agent-icon">🤖</span>
+          </button>
+        )}
 
         {!showAgent && (
           <div className="agent-tooltip">
