@@ -24,7 +24,6 @@ El sistema SHALL permitir escanear códigos de barras y mostrar el ticket de ven
 #### Scenario: Cerrar venta
 - **WHEN** el usuario cierra la venta
 - **THEN** la venta pasa a estado "closed"
-- **AND** se descuenta stock
 
 ### Requirement: Historial de ventas
 El sistema SHALL mostrar un calendario para seleccionar fecha y listar ventas.

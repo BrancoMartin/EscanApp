@@ -3,7 +3,6 @@ from Backend.repositories.sale_repository import SaleRepository
 from Backend.repositories.product_repository import ProductRepository
 from Backend.models.sale import Sale
 from Backend.models.item_sale import SaleItem
-from Backend.models.product import Product
 from datetime import datetime, date
 
 
@@ -39,10 +38,6 @@ class SaleService:
         sale = self.repo.get_by_id(sale_id)
         if not sale:
             return {"error": "Sale not found"}
-        for item in self.repo.get_items(sale_id):
-            product = self.product.get_by_id(item.product_id)
-            if product and product.stock is not None:
-                product.stock = max(0, product.stock - item.quantity)
         sale.state = "closed"
         self.repo.update_total(sale)
         return self._format_sale(sale)
@@ -82,8 +77,6 @@ class SaleService:
         product = self.product.get_by_barcode(barcode)
         if not product:
             return {"error": "Product not found"}
-        if product.stock is not None and product.stock <= 0:
-            return {"error": f"Producto '{product.name}' sin stock disponible"}
         pending_sale = self.repo.get_pending_sale()
         if not pending_sale:
             pending_sale = Sale(state="pending", total_price=0.0, created_at=date.today())
@@ -91,8 +84,6 @@ class SaleService:
         existing_item = self.repo.get_item_by_sale_and_product(pending_sale.id, product.id)
         if existing_item:
             new_quantity = existing_item.quantity + 1
-            if product.stock is not None and new_quantity > product.stock:
-                return {"error": f"Stock insuficiente para '{product.name}': disponible {product.stock}"}
             existing_item.quantity = new_quantity
         else:
             item = SaleItem(

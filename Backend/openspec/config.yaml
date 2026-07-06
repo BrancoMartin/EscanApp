@@ -37,6 +37,5 @@ specs:
   ai-agent:       specs/ai-agent/spec.md
   ui:             specs/ui/spec.md
   timestamps:     specs/timestamps/spec.md
-  product-stock:  specs/product-stock/spec.md
   currency-microservice:  specs/currency-microservice/spec.md
   mobile:  specs/mobile/spec.md

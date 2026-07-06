@@ -15,7 +15,6 @@ class Product(Base):
     barcode = Column(String, unique=True, nullable=False, index=True)
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
-    stock = Column(Integer, nullable=False, default=0)
 
     sale_items = relationship("SaleItem", back_populates="product")
 
