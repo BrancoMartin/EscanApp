@@ -42,6 +42,28 @@ El sistema SHALL permitir listar todas las ventas registradas.
 - **WHEN** se envía GET /api/sales/
 - **THEN** retorna un array con todas las ventas incluyendo items
 
+### Requirement: Listar ventas de las últimas 24 horas
+El sistema SHALL permitir consultar las ventas registradas durante las últimas 24 horas para alimentar la página web de historial reciente.
+
+#### Scenario: Listado reciente exitoso
+- **WHEN** se envía GET /api/sales/recent
+- **THEN** retorna un array con las ventas cuyo `created_at` sea mayor o igual a la fecha/hora actual menos 24 horas
+- **AND** cada venta incluye `id`, `state`, `total_price`, `created_at` e `items`
+- **AND** la cantidad de items mostrable por la UI se calcula como `items.length` sin requerir un campo persistido adicional
+
+#### Scenario: Sin ventas recientes
+- **WHEN** se envía GET /api/sales/recent y no hay ventas en las últimas 24 horas
+- **THEN** retorna un array vacío
+
+#### Scenario: Orden del listado reciente
+- **WHEN** existen múltiples ventas recientes
+- **THEN** retorna primero las ventas más nuevas, ordenadas por `created_at` descendente
+
+#### Implementation Notes
+- La ruta `/api/sales/recent` MUST declararse antes de `/api/sales/{sale_id}` para evitar que FastAPI interprete `recent` como un `sale_id`.
+- Para que el filtro de 24 horas sea real, las ventas nuevas MUST guardar `created_at` con fecha y hora (`datetime.now()`), no solo con fecha (`date.today()`).
+- Esta consulta no SHALL modificar ventas, items ni productos; es solo lectura.
+
 ### Requirement: Obtener detalle de venta
 El sistema SHALL permitir obtener el detalle completo de una venta por su ID.
 

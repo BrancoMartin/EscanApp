@@ -75,20 +75,38 @@ La pantalla de escaneo SHALL permitir ingresar un código de barras, mostrar el 
 - **THEN** el item se elimina o decrementa su cantidad
 - **AND** el ticket se actualiza
 
-### Requirement: Historial de ventas con calendario
-La pantalla de historial SHALL mostrar un calendario para seleccionar una fecha y listar las ventas de ese día.
+### Requirement: Historial de ventas de las últimas 24 horas
+La pantalla de historial SHALL mostrar una tabla simple con todas las ventas realizadas durante las últimas 24 horas, siguiendo el patrón de implementación de `Proyecto_lector_de_codigo_barras/frontend/src/Components/SalesHistory`.
 
-#### Scenario: Seleccionar fecha
-- **WHEN** el usuario selecciona una fecha en el calendario
-- **THEN** se cargan las ventas de esa fecha
+#### Scenario: Carga inicial
+- **WHEN** el usuario navega a `/sales-history`
+- **THEN** la pantalla carga automáticamente las ventas recientes desde `/api/sales/recent`
+- **AND** muestra el título "Historial de ventas"
+- **AND** muestra una descripción breve indicando que permite consultar ventas cerradas y revisar tickets
 
-#### Scenario: Ver detalle de venta
-- **WHEN** el usuario hace clic en una venta de la lista
-- **THEN** se abre un modal con el detalle de la venta (productos, cantidades, subtotales)
+#### Scenario: Tabla con ventas recientes
+- **WHEN** la API retorna una lista con ventas recientes
+- **THEN** se muestra una tabla responsive
+- **AND** la tabla incluye columnas para ID, Fecha, Total, Items y Estado
+- **AND** cada fila muestra `sale.id`, `sale.created_at`, `sale.total_price`, `sale.items.length` y `sale.state`
 
-#### Scenario: Fecha sin ventas
-- **WHEN** el usuario selecciona una fecha sin ventas
-- **THEN** se muestra indicador de que no hay ventas
+#### Scenario: Estado de carga
+- **WHEN** la pantalla está esperando la respuesta de la API
+- **THEN** muestra el mensaje "Cargando ventas..."
+
+#### Scenario: Error de carga
+- **WHEN** la API falla o la respuesta no puede procesarse
+- **THEN** muestra el mensaje "No se pudo cargar el historial de ventas"
+
+#### Scenario: Sin ventas recientes
+- **WHEN** la API retorna un array vacío
+- **THEN** muestra el mensaje "No hay ventas registradas en las últimas 24 horas."
+
+#### Implementation Notes
+- La implementación SHALL reutilizar la estructura visual del proyecto de referencia: `Nav`, `option-panel`, bloque `box-title`, tabla dentro de `history-table-wrapper`, y estilos de tabla con borde redondeado, sombra suave y scroll horizontal en pantallas chicas.
+- A diferencia del proyecto de referencia, este proyecto MUST usar `fetch` nativo para llamadas HTTP; no SHALL introducir `axios`.
+- La pantalla no SHALL usar calendario ni modal para esta funcionalidad de últimas 24 horas, salvo que se defina una funcionalidad separada en otra spec.
+- La ruta web SHALL mantenerse en `/sales-history` para no romper la navegación existente.
 
 ### Requirement: Panel de chat con agente IA
 El sistema SHALL mostrar un panel lateral de chat con el agente IA, accesible desde el botón flotante en la página de inicio.
