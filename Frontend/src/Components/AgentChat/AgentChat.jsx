@@ -257,11 +257,14 @@ function AgentChat({ onClose }) {
         {loading && (
           <div className="message assistant loading">
             <div className="message-content">
-              <span className="avatar">🤖</span>
-              <div className="typing-indicator">
-                <span></span>
-                <span></span>
-                <span></span>
+              <span className="avatar avatar-thinking">🤖</span>
+              <div className="thinking-bubble">
+                <div className="typing-indicator">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
+                <span className="thinking-text">Pensando</span>
               </div>
             </div>
           </div>
@@ -291,7 +294,11 @@ function AgentChat({ onClose }) {
           disabled={loading || !input.trim()}
           className="send-btn"
         >
-          {loading ? "..." : "Enviar"}
+          {loading ? (
+            <span className="btn-spinner" aria-label="Enviando" />
+          ) : (
+            "Enviar"
+          )}
         </button>
       </form>
     </aside>

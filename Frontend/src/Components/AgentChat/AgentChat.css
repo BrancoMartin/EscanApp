@@ -52,8 +52,8 @@
   background: rgba(255, 255, 255, 0.2);
   border: none;
   color: white;
-  width: 0.5rem;
-  height: 3rem;
+  width: 2.4rem;
+  height: 2.4rem;
   border-radius: 50%;
   cursor: pointer;
   font-size: 1rem;
@@ -72,8 +72,8 @@
   background: rgba(255, 255, 255, 0.2);
   border: none;
   color: white;
-  width: 0.5rem;
-  height: 3rem;
+  width: 2.4rem;
+  height: 2.4rem;
   border-radius: 50%;
   cursor: pointer;
   font-size: 1.2rem;
@@ -187,38 +187,158 @@
   margin-left: 42px;
 }
 
+/* ===== Animación de carga "pensando" ===== */
+.message.loading .message-content {
+  align-items: center;
+}
+
+.avatar-thinking {
+  position: relative;
+  animation: avatarBob 1.6s ease-in-out infinite;
+}
+
+.avatar-thinking::after {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(123, 70, 255, 0.4), transparent 70%);
+  animation: avatarGlow 1.6s ease-in-out infinite;
+  z-index: -1;
+}
+
+@keyframes avatarBob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes avatarGlow {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.3);
+  }
+}
+
+.thinking-bubble {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 16px;
+  border-radius: 16px;
+  border-bottom-left-radius: 4px;
+  background: linear-gradient(100deg, #f5f3ff 0%, #ece4ff 50%, #f5f3ff 100%);
+  background-size: 220% 100%;
+  border: 1px solid rgba(123, 70, 255, 0.12);
+  box-shadow: 0 4px 14px rgba(123, 70, 255, 0.12);
+  animation: bubbleShimmer 1.8s linear infinite;
+}
+
+@keyframes bubbleShimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.thinking-text {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #7b46ff;
+  letter-spacing: 0.02em;
+}
+
+.thinking-text::after {
+  content: "";
+  animation: dotsText 1.6s steps(1, end) infinite;
+}
+
+@keyframes dotsText {
+  0% {
+    content: "";
+  }
+  25% {
+    content: ".";
+  }
+  50% {
+    content: "..";
+  }
+  75% {
+    content: "...";
+  }
+}
+
 .typing-indicator {
   display: flex;
-  gap: 4px;
-  padding: 12px 16px;
+  gap: 5px;
+  padding: 0;
 }
 
 .typing-indicator span {
-  width: 8px;
-  height: 8px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
-  background: #b565ff;
-  animation: typing 1.4s infinite;
+  background: linear-gradient(135deg, #7b46ff, #b565ff);
+  animation: typingWave 1.3s ease-in-out infinite;
 }
 
 .typing-indicator span:nth-child(2) {
-  animation-delay: 0.2s;
+  animation-delay: 0.18s;
 }
 
 .typing-indicator span:nth-child(3) {
-  animation-delay: 0.4s;
+  animation-delay: 0.36s;
 }
 
-@keyframes typing {
+@keyframes typingWave {
   0%,
   60%,
   100% {
-    opacity: 0.5;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
+    opacity: 0.55;
   }
   30% {
+    transform: translateY(-8px) scale(1.18);
     opacity: 1;
-    transform: translateY(-10px);
+  }
+}
+
+/* ===== Spinner del botón de envío ===== */
+.btn-spinner {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2.5px solid rgba(255, 255, 255, 0.45);
+  border-top-color: #fff;
+  animation: btnSpin 0.7s linear infinite;
+  display: inline-block;
+}
+
+@keyframes btnSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .avatar-thinking,
+  .avatar-thinking::after,
+  .thinking-bubble,
+  .typing-indicator span,
+  .btn-spinner {
+    animation-duration: 0.001s;
+    animation-iteration-count: 1;
   }
 }
 
@@ -297,9 +417,10 @@
   background: linear-gradient(135deg, #7b46ff 0%, #b565ff 100%);
   border: none;
   color: white;
-  width: 0.5rem;
+  min-width: 92px;
   height: 3rem;
-  border-radius: 50%;
+  padding: 0 22px;
+  border-radius: 24px;
   cursor: pointer;
   font-weight: 700;
   font-size: 0.9rem;

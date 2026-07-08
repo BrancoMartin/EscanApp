@@ -61,7 +61,15 @@ function LastSalesOption() {
                     <td>{sale.created_at}</td>
                     <td>${sale.total_price}</td>
                     <td>{sale.items.length}</td>
-                    <td>{sale.state === "closed" ? "Cerrada" : "Abierta"}</td>
+                    <td>
+                      <span
+                        className={`sale-pill ${
+                          sale.state === "closed" ? "closed" : "open"
+                        }`}
+                      >
+                        {sale.state === "closed" ? "Cerrada" : "Abierta"}
+                      </span>
+                    </td>
                   </tr>
                 ))}
               </tbody>

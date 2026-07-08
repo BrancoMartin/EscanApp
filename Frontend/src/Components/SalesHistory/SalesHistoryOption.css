@@ -22,7 +22,7 @@
   font-weight: 600;
   cursor: pointer;
   color: #ffffff;
-  font-family: Georgia, "Times New Roman", Times, serif;
+  font-family: inherit;
   padding: 0.3rem 0.6rem;
   border-radius: 8px;
   transition: background 0.2s ease;

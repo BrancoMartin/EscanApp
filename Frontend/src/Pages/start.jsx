@@ -11,17 +11,30 @@ function Start() {
     <div className="start-page">
       <header className="start-header">
         <h1>EscanApp</h1>
+        <p>
+          Gestioná tu comercio: cargá productos, escaneá ventas y ajustá precios
+          con ayuda del asistente IA.
+        </p>
       </header>
 
       <div className="start-actions">
         <button onClick={() => navigate("/add-product")}>
-          <p className="button-start">Agregar Producto</p>
+          <span className="button-icon" aria-hidden="true">
+            📦
+          </span>
+          <span className="button-start">Agregar Producto</span>
         </button>
         <button onClick={() => navigate("/sales-history")}>
-          <p className="button-start">Historial de Ventas</p>
+          <span className="button-icon" aria-hidden="true">
+            📊
+          </span>
+          <span className="button-start">Historial de Ventas</span>
         </button>
         <button onClick={() => navigate("/scan-products")}>
-          <p className="button-start">Escanear Productos</p>
+          <span className="button-icon" aria-hidden="true">
+            📷
+          </span>
+          <span className="button-start">Escanear Productos</span>
         </button>
       </div>
 

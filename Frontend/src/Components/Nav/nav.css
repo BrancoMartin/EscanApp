@@ -45,6 +45,17 @@
   transform: translateY(-1px);
 }
 
+.item-list a.active {
+  background: linear-gradient(135deg, #7b46ff 0%, #b565ff 100%);
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(123, 70, 255, 0.32);
+}
+
+.item-list a.active:hover {
+  color: #fff;
+  filter: brightness(1.06);
+}
+
 .item-list a:focus-visible {
   outline: 3px solid rgba(123, 70, 255, 0.45);
   outline-offset: 4px;
