@@ -1,10 +1,4 @@
-# AI Agent Domain
-
-## Purpose
-
-El agente de IA del chat interpreta mensajes en lenguaje natural del comerciante y ejecuta acciones de gestión sobre el inventario (ajustar precios, crear productos, crear categorías, listar categorías, agregar atributos) o responde consultas generales. Se apoya en 9 modelos Ollama especializados accedidos vía LangChain, con un clasificador de intención que enruta cada mensaje a la acción correspondiente en `controller_agent.py`.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Detección de intención (Intent Classifier)
 
@@ -36,6 +30,43 @@ El intent `ajustar_precios` cubre tanto aumentos como disminuciones de precio (s
 
 - **WHEN** el usuario pregunta "cuantos productos tengo?"
 - **THEN** el sistema detecta intent = "consulta_general"
+
+### Requirement: Creación de productos vía chat
+
+El sistema SHALL guiar al usuario en la creación de un producto mediante un flujo conversacional paso a paso con este orden: **nombre → precio → descripción (opcional) → proveedor (opcional) → código de barras**. La descripción y el proveedor SHALL preguntarse SIEMPRE una vez (no se infieren en silencio), y el usuario SHALL poder omitirlos respondiendo "no" (u otra negación). Los datos que el usuario ya proporcionó explícitamente en el mensaje inicial NO SHALL volver a preguntarse.
+
+#### Scenario: Flujo completo de creación
+
+- **WHEN** el usuario indica querer crear un producto
+- **THEN** el sistema solicita el nombre
+- **AND** luego solicita el precio
+- **AND** luego pregunta si desea agregar una descripción (que puede omitir con "no")
+- **AND** luego pregunta si tiene proveedor (que puede omitir con "no")
+- **AND** luego solicita el código de barras
+- **AND** finalmente crea el producto con la descripción/proveedor indicados y los atributos inferidos
+
+#### Scenario: Descripción y proveedor omitidos
+
+- **WHEN** el usuario responde "no" a la pregunta de descripción y a la de proveedor
+- **THEN** el producto se crea con descripción y proveedor vacíos (sin inventar valores)
+
+#### Scenario: Proveedor ya indicado en el mensaje inicial
+
+- **WHEN** el usuario escribe "creame el producto X a 500 proveedor Distribuidora Norte"
+- **THEN** el sistema NO vuelve a preguntar el proveedor (usa "Distribuidora Norte") y solo pregunta lo que falte
+
+#### Scenario: Escaneo de barcode de producto no existente
+
+- **WHEN** el usuario escanea un barcode no registrado
+- **THEN** el sistema inicia el flujo de creación preguntando el nombre
+- **AND** guarda el barcode como pendiente
+
+#### Scenario: Producto duplicado por barcode
+
+- **WHEN** el usuario completa la creación con un barcode ya existente
+- **THEN** el sistema rechaza con mensaje "Ya existe un producto con ese codigo de barras"
+
+## ADDED Requirements
 
 ### Requirement: Preferir preguntar antes que especular
 
@@ -175,89 +206,6 @@ Dado que los modelos Ollama de 0.5b (clasificador de intención e `IncreaseDetec
 - **THEN** el controlador NO fuerza `ajustar_precios`
 - **AND** el mensaje se responde como `consulta_general`
 
-### Requirement: Creación de productos vía chat
-
-El sistema SHALL guiar al usuario en la creación de un producto mediante un flujo conversacional paso a paso con este orden: **nombre → precio → descripción (opcional) → proveedor (opcional) → código de barras**. La descripción y el proveedor SHALL preguntarse SIEMPRE una vez (no se infieren en silencio), y el usuario SHALL poder omitirlos respondiendo "no" (u otra negación). Los datos que el usuario ya proporcionó explícitamente en el mensaje inicial NO SHALL volver a preguntarse.
-
-#### Scenario: Flujo completo de creación
-
-- **WHEN** el usuario indica querer crear un producto
-- **THEN** el sistema solicita el nombre
-- **AND** luego solicita el precio
-- **AND** luego pregunta si desea agregar una descripción (que puede omitir con "no")
-- **AND** luego pregunta si tiene proveedor (que puede omitir con "no")
-- **AND** luego solicita el código de barras
-- **AND** finalmente crea el producto con la descripción/proveedor indicados y los atributos inferidos
-
-#### Scenario: Descripción y proveedor omitidos
-
-- **WHEN** el usuario responde "no" a la pregunta de descripción y a la de proveedor
-- **THEN** el producto se crea con descripción y proveedor vacíos (sin inventar valores)
-
-#### Scenario: Proveedor ya indicado en el mensaje inicial
-
-- **WHEN** el usuario escribe "creame el producto X a 500 proveedor Distribuidora Norte"
-- **THEN** el sistema NO vuelve a preguntar el proveedor (usa "Distribuidora Norte") y solo pregunta lo que falte
-
-#### Scenario: Escaneo de barcode de producto no existente
-
-- **WHEN** el usuario escanea un barcode no registrado
-- **THEN** el sistema inicia el flujo de creación preguntando el nombre
-- **AND** guarda el barcode como pendiente
-
-#### Scenario: Producto duplicado por barcode
-
-- **WHEN** el usuario completa la creación con un barcode ya existente
-- **THEN** el sistema rechaza con mensaje "Ya existe un producto con ese codigo de barras"
-
-### Requirement: Extracción de atributos por IA
-
-El sistema SHALL extraer atributos (categoría + valor) del nombre y descripción de un producto usando el modelo attribute_extractor.
-
-#### Scenario: Extracción al crear producto
-
-- **WHEN** se crea un producto desde el chat
-- **THEN** el sistema invoca attribute_extractor para inferir atributos
-- **AND** crea categorías y atributos faltantes
-- **AND** asocia los atributos al producto
-
-#### Scenario: Proveedor informado al crear producto
-
-- **WHEN** se crea un producto con el campo proveedor informado
-- **THEN** el sistema invoca CreateCategories para crear la categoría `proveedor` si no existe
-- **AND** CreateCategories SHALL devolver `proveedor` como categoría nueva, no el valor concreto del proveedor
-- **AND** si el modelo CreateCategories omite `proveedor`, el wrapper del agente SHALL agregar `proveedor` de forma determinística antes de retornar la respuesta
-- **AND** el sistema invoca AttributeExtractor con la categoría `proveedor` disponible
-- **AND** AttributeExtractor SHALL devolver un atributo con `categoria = "proveedor"` y `valor` igual al proveedor ingresado por el usuario
-- **AND** si el modelo AttributeExtractor omite ese atributo, el wrapper del agente SHALL agregarlo de forma determinística
-- **AND** el sistema asocia ese atributo al producto mediante ProductAttribute
-
-#### Scenario: Proveedor vacío al crear producto
-
-- **WHEN** se crea un producto sin proveedor o con proveedor vacío, null, None, n/a, desconocido o similar
-- **THEN** CreateCategories SHALL NOT crear la categoría `proveedor`
-- **AND** AttributeExtractor SHALL NOT devolver atributos de categoría `proveedor`
-
-#### Scenario: Enriquecimiento post-creación
-
-- **WHEN** se crea un producto
-- **THEN** el sistema invoca una segunda pasada de extracción para atributos adicionales
-- **AND** asigna los nuevos atributos encontrados
-
-### Requirement: Manejo de información incompleta
-
-El sistema SHALL detectar cuando la solicitud del usuario tiene información faltante y solicitar los datos necesarios.
-
-#### Scenario: Aumento sin especificar objetivo
-
-- **WHEN** el usuario dice "aumentame los precios" sin especificar cuánto
-- **THEN** el sistema solicita el porcentaje de aumento
-
-#### Scenario: Aumento sin porcentaje
-
-- **WHEN** el usuario dice "aumentame la leche" sin especificar porcentaje
-- **THEN** el sistema solicita el porcentaje de aumento
-
 ### Requirement: Agregado de atributo con extracción determinística del valor
 
 Al agregar un atributo vía chat (intent `agregar_atributo`), el VALOR del atributo SHALL extraerse determinísticamente del mensaje (el texto que sigue a la palabra "atributo"), y NO SHALL inferirse con un modelo, porque los modelos de 0.5b alucinan el valor (ej. devolvían `categoria=marca, valor=material` para "creame el atributo galletas").
@@ -384,117 +332,16 @@ La detección de "acción ambigua" SHALL ser una heurística determinística en 
 - **WHEN** al usuario le falta el porcentaje en un ajuste de precios o un dato al crear un producto
 - **THEN** el sistema pregunta el dato faltante de forma inline y determinística, sin invocar `IncompleteHandler`
 
-### Requirement: Consultas generales de inventario
+## REMOVED Requirements
 
-El sistema SHALL responder consultas generales sobre el estado del inventario: cantidad de productos, ventas del día, etc.
+### Requirement: Aumento de precios por tipo
 
-#### Scenario: Consultar cantidad de productos
+**Reason**: Reemplazado por "Ajuste de precios por tipo y operación", que generaliza a aumento + disminución y agrega el tipo `por_categoria`.
 
-- **WHEN** el usuario pregunta "cuantos productos tengo?"
-- **THEN** el sistema consulta la base de datos
-- **AND** retorna el conteo total de productos
+**Migration**: El comportamiento de aumento se conserva íntegro como la operación `aumento`; se agrega la operación `disminucion`.
 
-#### Scenario: Consultar ventas
+### Requirement: Flujo detallado de aumento por atributo con descubrimiento automático
 
-- **WHEN** el usuario pregunta "cuales fueron las ventas de hoy?" o "decime las ventas que tuve este mes" o "esta semana cuantos {producto} vendi?"
-- **THEN** el sistema consulta las ventas
-- **AND** retorna el resumen
+**Reason**: Reemplazado por "Flujo detallado de ajuste por atributo con descubrimiento automático", idéntico salvo que aplica la operación (aumento o disminución) indicada por el usuario.
 
-### Requirement: 9 modelos especializados de IA
-
-El sistema SHALL utilizar 9 modelos Ollama especializados, cada uno con un prompt específico para una tarea concreta.
-
-#### Scenario: Modelos cargados
-
-- **WHEN** el sistema inicia el agente
-- **THEN** todos los modelos están disponibles para ser invocados según la intención detectada
-
-### Requirement: Fábrica de LLM en ollama_client.py
-
-El archivo `ollama_client.py` SHALL definir una función por cada modelo, y cada función SHALL instanciar `OllamaLLM` directamente con su modelo y `OLLAMA_BASE_URL`, sin usar helpers como `_cached()`.
-
-#### Scenario: Formato de cada función
-
-- **WHEN** se define una función para un modelo
-- **THEN** la función SHALL tener este formato:
-
-```python
-def create_categories_by_products():
-    return OllamaLLM(
-        model=CreateCategories,
-        base_url=OLLAMA_BASE_URL
-    )
-```
-
-- **AND** cada función usa el identificador del modelo correspondiente (e.g. `CreateCategories`, `Intent`, `CreateProduct`, `AttributeExtractor`, `AttributeClassifier`, `AttributeResolver`, `IncompleteHandler`, `IncreaseDetector`, `GeneralConsultant`)
-- **AND** todas las funciones reciben el mismo `base_url` desde la variable `OLLAMA_BASE_URL`
-- **AND** ninguna función SHALL usar el patrón `_cached("...")`
-
-### Requirement: Limpieza de valores nulos en respuestas de modelos
-
-Los model files SHALL limpiar valores nulos/vacíos de las listas retornadas por los modelos usando una lista `SINONIMOS_NULL` con un bucle `for` explícito. NO SHALL usar `frozenset` con list comprehension.
-
-#### Scenario: Formato correcto de limpieza
-
-- **WHEN** un modelo retorna una lista con valores que pueden ser nulos
-- **THEN** la función SHALL usar este formato:
-
-```python
-SINONIMOS_NULL = [
-    "null",
-    "none",
-    "nada",
-    "vacio",
-    "vacío",
-    "ninguno",
-    "ninguna",
-    "nil",
-    "empty",
-    "blank",
-    "unknown",
-    "desconocido",
-    "na",
-    "n/a",
-    "-"
-]
-
-categorias_validas = []
-
-for categoria in data.get("categorias_nuevas", []):
-    nombre = categoria.get("nombre", "").strip().lower()
-
-    if nombre not in SINONIMOS_NULL and nombre != "":
-        categorias_validas.append(categoria)
-
-data["categorias_nuevas"] = categorias_validas
-
-return data
-```
-
-- **AND** NO SHALL usar `frozenset` con list comprehension como este patrón:
-
-```python
-# PROHIBIDO
-_NULL_SYNONYMS = frozenset({ 'null', 'none', ... })
-cats = data.get("categorias_nuevas", [])
-if type(cats) == list:
-
-        c for c in cats if type(c) == dict and type(c.get("nombre")) == str
-        and c["nombre"].strip().lower() not in _NULL_SYNONYMS
-    ]
-```
-
-### Requirement: Performance — respuesta máxima en 3.5 segundos
-
-El sistema SHALL completar cualquier interacción del agente IA en un máximo de 3.5 segundos, desde que el usuario envía el mensaje hasta que recibe la respuesta.
-
-#### Scenario: Respuesta dentro del límite
-
-- **WHEN** el usuario envía un mensaje al agente
-- **THEN** el sistema procesa (intent detection + acción + respuesta) en menos de 3.5s
-
-#### Scenario: Timeout con feedback
-
-- **WHEN** el procesamiento supera los 3.5s
-- **THEN** el frontend muestra un mensaje de que el agente está tardando más de lo esperado
-- **AND** permite al usuario reintentar o cancelar
+**Migration**: Ninguna migración de datos; solo se generaliza el verbo de la operación.

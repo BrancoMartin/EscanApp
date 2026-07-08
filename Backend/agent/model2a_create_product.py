@@ -2,10 +2,23 @@ from .ollama_client import get_create_product
 from langchain_core.prompts import PromptTemplate
 import json
 
-_NULL_SYNONYMS = frozenset({
-    'null', 'none', 'nada', 'vacio', 'vacío', 'ninguno', 'ninguna',
-    'nil', 'empty', 'blank', 'unknown', 'desconocido', 'na', 'n/a', '-'
-})
+SINONIMOS_NULL = [
+    "null",
+    "none",
+    "nada",
+    "vacio",
+    "vacío",
+    "ninguno",
+    "ninguna",
+    "nil",
+    "empty",
+    "blank",
+    "unknown",
+    "desconocido",
+    "na",
+    "n/a",
+    "-"
+]
 
 
 def create_product_with_attributes(user_prompt: str, existing_categories: list) -> dict:
@@ -18,14 +31,31 @@ def create_product_with_attributes(user_prompt: str, existing_categories: list) 
         response = chain.invoke({"user_prompt": user_prompt, "existing_categories": cats})
         clean = response.strip().replace("```json", "").replace("```", "").strip()
         data = json.loads(clean)
-        atributos = data.get("atributos_inferidos", [])
+
+        # El Modelfile CreateProduct devuelve la clave "atributos"; el resto del
+        # sistema espera "atributos_inferidos". Aceptamos ambas y normalizamos.
+        atributos = data.get("atributos_inferidos")
+        if atributos is None:
+            atributos = data.get("atributos", [])
+
+        atributos_validos = []
         if type(atributos) == list:
-            data["atributos_inferidos"] = [
-                a for a in atributos
-                if type(a) == dict
-                and type(a.get("categoria")) == str and a["categoria"].strip().lower() not in _NULL_SYNONYMS
-                and type(a.get("valor")) == str and a["valor"].strip().lower() not in _NULL_SYNONYMS
-            ]
+            for a in atributos:
+                if type(a) != dict:
+                    continue
+                categoria = a.get("categoria")
+                valor = a.get("valor")
+                if type(categoria) != str or type(valor) != str:
+                    continue
+                nombre_categoria = categoria.strip().lower()
+                nombre_valor = valor.strip().lower()
+                if nombre_categoria in SINONIMOS_NULL or nombre_categoria == "":
+                    continue
+                if nombre_valor in SINONIMOS_NULL or nombre_valor == "":
+                    continue
+                atributos_validos.append(a)
+
+        data["atributos_inferidos"] = atributos_validos
         return data
     except Exception as e:
         print(f"[create_product] Error: {e}")

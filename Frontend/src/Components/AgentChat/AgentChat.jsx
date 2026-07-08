@@ -65,7 +65,7 @@ function AgentChat({ onClose }) {
 
         examples.push(`"Aumentame todos los productos un 15%"`);
 
-        const welcomeText = `¡Hola! Soy tu asistente de precios. Podes pedirme cosas como:\n\n${examples.map((e, i) => `${i + 1}. ${e}`).join("\n")}\n\nTambien podes escanear un codigo de barras y te muestro el producto.`;
+        const welcomeText = `¡Hola! Soy tu asistente de precios. Podes pedirme cosas como:\n\n${examples.map((e, i) => `${i + 1}. ${e}`).join("\n")}\n\nTambien podes escanear un codigo de barras y te muestro el producto.\n\n O crear un producto desde acá.`;
 
         setMessages([{ id: 1, type: "assistant", text: welcomeText }]);
       } catch (error) {
@@ -119,18 +119,15 @@ function AgentChat({ onClose }) {
         assistant: msg.assistant || "",
       }));
 
-      const response = await fetch(
-        `${BASE_URL}/api/agent/chat`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            message: sentInput,
-            conversation_history: conversationForBackend,
-            context: context,
-          }),
-        },
-      );
+      const response = await fetch(`${BASE_URL}/api/agent/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: sentInput,
+          conversation_history: conversationForBackend,
+          context: context,
+        }),
+      });
       if (!response.ok) {
         throw new Error("Error en la respuesta del servidor");
       }

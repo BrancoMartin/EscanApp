@@ -2,10 +2,23 @@ import json
 from langchain_core.prompts import PromptTemplate
 from .ollama_client import get_attribute_classifier
 
-_NULL_SYNONYMS = frozenset({
-    'null', 'none', 'nada', 'vacio', 'vacío', 'ninguno', 'ninguna',
-    'nil', 'empty', 'blank', 'unknown', 'desconocido', 'na', 'n/a', '-'
-})
+SINONIMOS_NULL = [
+    "null",
+    "none",
+    "nada",
+    "vacio",
+    "vacío",
+    "ninguno",
+    "ninguna",
+    "nil",
+    "empty",
+    "blank",
+    "unknown",
+    "desconocido",
+    "na",
+    "n/a",
+    "-"
+]
 
 
 def detect_category_and_value(value: str, existing_categories: list) -> dict:
@@ -25,9 +38,9 @@ def detect_category_and_value(value: str, existing_categories: list) -> dict:
             return {"categoria_inferida": None, "valor": value, "categoria_existe": False}
         cat_inf = data.get("categoria_inferida")
         val = data.get("valor")
-        if type(cat_inf) != str or cat_inf.strip().lower() in _NULL_SYNONYMS:
+        if type(cat_inf) != str or cat_inf.strip().lower() in SINONIMOS_NULL:
             data["categoria_inferida"] = None
-        if type(val) != str or val.strip().lower() in _NULL_SYNONYMS:
+        if type(val) != str or val.strip().lower() in SINONIMOS_NULL:
             data["valor"] = value
         return data
     except Exception as e:
