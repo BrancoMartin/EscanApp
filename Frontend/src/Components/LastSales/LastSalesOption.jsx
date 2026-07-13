@@ -30,10 +30,16 @@ function LastSalesOption() {
       <Nav />
       <div className="option-form">
         <div className="box-title">
-          <h2 className="title">Ventas de las últimas 24 hs</h2>
-          <p className="description">
-            Consulta las ventas cerradas registradas durante las últimas 24 horas.
-          </p>
+          <span className="box-title-icon" aria-hidden="true">
+            🕒
+          </span>
+          <div className="box-title-text">
+            <h2 className="title">Ventas de las últimas 24 hs</h2>
+            <p className="description">
+              Consulta las ventas cerradas registradas durante las últimas 24
+              horas.
+            </p>
+          </div>
         </div>
 
         {loading ? (
@@ -41,9 +47,36 @@ function LastSalesOption() {
         ) : error ? (
           <p className="error-message">{error}</p>
         ) : history.length === 0 ? (
-          <p className="empty-text">No hay ventas registradas en las últimas 24 horas.</p>
+          <div className="empty-state">
+            <span className="empty-icon">🕒</span>
+            <p className="empty-text">
+              No hay ventas registradas en las últimas 24 horas.
+            </p>
+          </div>
         ) : (
-          <div className="history-table-wrapper">
+          <>
+            <div className="stats-row">
+              <div className="stat-card">
+                <span className="stat-label">Ventas</span>
+                <span className="stat-value">{history.length}</span>
+              </div>
+              <div className="stat-card">
+                <span className="stat-label">Total facturado</span>
+                <span className="stat-value">
+                  $
+                  {history
+                    .reduce((acc, s) => acc + Number(s.total_price || 0), 0)
+                    .toFixed(2)}
+                </span>
+              </div>
+              <div className="stat-card">
+                <span className="stat-label">Ítems vendidos</span>
+                <span className="stat-value">
+                  {history.reduce((acc, s) => acc + s.items.length, 0)}
+                </span>
+              </div>
+            </div>
+            <div className="history-table-wrapper">
             <table className="history-table">
               <thead>
                 <tr>
@@ -74,7 +107,8 @@ function LastSalesOption() {
                 ))}
               </tbody>
             </table>
-          </div>
+            </div>
+          </>
         )}
       </div>
     </section>

@@ -3,6 +3,7 @@ import Nav from "../Nav/nav";
 import "./SalesHistoryOption.css";
 import Calendar from "react-calendar";
 import Modal from "./Modal.jsx";
+import { History } from "lucide-react";
 
 const BASE_URL = import.meta.env.PROD ? "" : "http://localhost:8000";
 
@@ -42,10 +43,16 @@ function SalesHistoryOption() {
       <Nav />
       <div className="option-form">
         <div className="box-title">
-          <h2 className="title">Historial de ventas</h2>
-          <p className="description">
-            Consulta las ventas ya cerradas y revisa el detalle de cada ticket.
-          </p>
+          <span className="box-title-icon" aria-hidden="true">
+            <History></History>
+          </span>
+          <div className="box-title-text">
+            <h2 className="title">Historial de ventas</h2>
+            <p className="description">
+              Selecciona un día en el calendario para revisar el detalle de cada
+              ticket.
+            </p>
+          </div>
         </div>
 
         <Calendar
@@ -57,7 +64,12 @@ function SalesHistoryOption() {
         {modalAbierto && (
           <>
             <div className="overlay" onClick={() => setModalAbierto(false)} />
-            <Modal loading={loading} error={error} buys={buys}></Modal>
+            <Modal
+              loading={loading}
+              error={error}
+              buys={buys}
+              onClose={() => setModalAbierto(false)}
+            ></Modal>
           </>
         )}
       </div>

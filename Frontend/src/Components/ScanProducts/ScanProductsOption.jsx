@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Nav from "../Nav/nav";
 import "./ScanProductsOption.css";
+import { ScanLine } from "lucide-react";
 
 const BASE_URL = import.meta.env.PROD ? "" : "http://localhost:8000";
 
@@ -12,7 +13,23 @@ function ScanProductsOption() {
   const [message, setMessage] = useState("");
   const [messageCancel, setMessageCancel] = useState("");
 
+  const inputRef = useRef(null);
+  const debounceRef = useRef(null);
+  // Detecta si el código lo está ingresando el lector (tecleo muy rápido) o
+  // una persona a mano. Empieza en true y se vuelve false apenas hay una pausa
+  // larga entre teclas, típica del ingreso manual.
+  const isScannerInputRef = useRef(true);
+  const lastKeyTimeRef = useRef(0);
+  // Intervalo máximo (ms) entre caracteres para considerarlo lector de barras.
+  const SCANNER_MAX_INTERVAL = 50;
+
+  // Mantiene el cursor siempre parpadeando en la barra de escaneo.
+  const focusInput = () => {
+    setTimeout(() => inputRef.current?.focus(), 0);
+  };
+
   useEffect(() => {
+    focusInput();
     const loadPending = async () => {
       try {
         const response = await fetch(`${BASE_URL}/api/sales/pending`);
@@ -25,41 +42,83 @@ function ScanProductsOption() {
     loadPending();
   }, []);
 
-  const handleScan = async (event) => {
-    console.log("HANDLE SCAN EJECUTANDOSE: event: ", event);
+  // Auto-escaneo SOLO para el lector de barras: cuando termina de "tipear" el
+  // código, se dispara handleScan solo. Si el código se escribió a mano, no se
+  // envía automáticamente; el usuario debe apretar el botón o Enter.
+  useEffect(() => {
+    if (!barcode.trim()) return;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      if (isScannerInputRef.current) {
+        triggerScan(barcode);
+      }
+    }, 120);
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [barcode]);
+
+  // Mide el tiempo entre teclas para distinguir el lector (rápido) del tecleo
+  // manual (lento). Con una sola pausa larga se marca como ingreso manual.
+  const handleBarcodeChange = (e) => {
+    const value = e.target.value;
+    const now = Date.now();
+
+    if (value === "") {
+      // Reinicio: nuevo código, se asume lector hasta que se demuestre lo contrario.
+      isScannerInputRef.current = true;
+    } else if (value.length === 1) {
+      // Primer carácter: todavía no hay intervalo para medir.
+      isScannerInputRef.current = true;
+    } else if (now - lastKeyTimeRef.current > SCANNER_MAX_INTERVAL) {
+      isScannerInputRef.current = false;
+    }
+
+    lastKeyTimeRef.current = now;
+    setBarcode(value);
+  };
+
+  const triggerScan = (rawCode) => {
+    const code = (rawCode ?? "").trim();
+    if (!code || loading) return;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    isScannerInputRef.current = true;
+    setBarcode("");
+    handleScan(code);
+  };
+
+  const handleScan = async (code) => {
     setError("");
+    setMessage("");
     setSale(null);
     setLoading(true);
 
-    console.log("HANDLE SCAN EJECUTANDOSE: barcode: ", barcode);
-
     try {
       const response = await fetch(
-        `${BASE_URL}/api/products/barcode/${encodeURIComponent(barcode)}`,
+        `${BASE_URL}/api/products/barcode/${encodeURIComponent(code)}`,
       );
       const data = await response.json();
       if (!response.ok) {
         throw { response: { data } };
       }
 
-      console.log("RESPUESTA ESCANEAR PRODUCTO", data);
-
       setSale(data);
-
-      console.log("TOTAL PRICE", sale?.total_price);
     } catch (err) {
-      setError(err?.response?.data?.detail || "No se pudo escanear el producto");
+      setError(
+        err?.response?.data?.detail || "No se pudo escanear el producto",
+      );
     } finally {
       setLoading(false);
+      focusInput();
     }
   };
 
   const HandleCloseSale = async () => {
     try {
-      const response = await fetch(
-        `${BASE_URL}/api/sales/${sale.id}/close`,
-        { method: "POST" },
-      );
+      const response = await fetch(`${BASE_URL}/api/sales/${sale.id}/close`, {
+        method: "POST",
+      });
       const data = await response.json();
       if (!response.ok) {
         throw { response: { data } };
@@ -134,67 +193,102 @@ function ScanProductsOption() {
 
       <form className="option-form">
         <div className="box-title">
-          <h2 className="title">Escanear productos</h2>
-          <p className="description">
-            Ingresa un código de barras para agregar el producto a la venta
-            pendiente.
-          </p>
+          <span className="box-title-icon" aria-hidden="true">
+            <ScanLine></ScanLine>
+          </span>
+          <div className="box-title-text">
+            <h2 className="title">Escanear productos</h2>
+            <p className="description">
+              Ingresa un código de barras para agregar el producto a la venta
+              pendiente.
+            </p>
+          </div>
         </div>
 
-        <label className="label-add-product">
-          Código de barras
-          <input
-            type="text"
-            value={barcode}
-            onChange={(e) => setBarcode(e.target.value)}
-            placeholder="Ej. 1234567890123"
-            onKeyDown={(e) => e.key === "Enter" && handleScan(e)}
-          />
-        </label>
-        <button
-          className="button"
-          type="button"
-          onClick={handleScan}
-          disabled={loading || !barcode.trim()}
-        >
-          {loading ? "Escaneando..." : "Escanear producto"}
-        </button>
+        <div className="scan-row">
+          <label className="label-add-product scan-input">
+            Código de barras
+            <input
+              ref={inputRef}
+              type="text"
+              value={barcode}
+              autoFocus
+              onChange={handleBarcodeChange}
+              onBlur={focusInput}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  triggerScan(barcode);
+                }
+              }}
+              placeholder="Escaneá o escribí el código de barras..."
+            />
+          </label>
+          <button
+            className="button scan-button"
+            type="button"
+            onClick={() => triggerScan(barcode)}
+            disabled={loading || !barcode.trim()}
+          >
+            {loading ? "Escaneando..." : "Escanear"}
+          </button>
+        </div>
+        {error && <p className="error-message">{error}</p>}
       </form>
-      {sale && (
-        <>
-          <div className="sale-preview">
-            <h2>TICKET</h2>
-            <h4>Total: ${sale.total_price}</h4>
-            <div className="sale-items">
-              {sale.items?.map((item) => (
-                <div key={item.id} className="sale-item">
-                  <strong>{item.product_name}</strong>
-                  <span>Cantidad: {item.quantity}</span>
-                  <span>Precio unitario: ${item.unit_price}</span>
-                  <span>Subtotal: ${item.subtotal}</span>
+
+      {sale && sale.items && (
+        <div className="ticket">
+          <div className="ticket-head">
+            <span className="ticket-badge">🧾</span>
+            <h2 className="ticket-title">Ticket de venta</h2>
+            <p className="ticket-sub">Venta pendiente #{sale.id}</p>
+          </div>
+
+          <div className="ticket-items">
+            {sale.items?.map((item) => (
+              <div key={item.id} className="ticket-item">
+                <div className="ticket-item-main">
+                  <strong className="ticket-item-name">
+                    {item.product_name}
+                  </strong>
+                  <span className="ticket-item-meta">
+                    {item.quantity} × ${item.unit_price}
+                  </span>
+                </div>
+                <div className="ticket-item-right">
+                  <span className="ticket-item-subtotal">${item.subtotal}</span>
                   <button
-                    className="button-cancel"
+                    className="ticket-remove"
+                    title="Quitar una unidad"
                     onClick={() => handleCancelProduct(item)}
                   >
-                    Cancelar producto
+                    ✕
                   </button>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
-          <div className="box-button">
-            <button className="button" onClick={HandleCloseSale}>
+
+          <div className="ticket-total">
+            <span>Total</span>
+            <span className="ticket-total-value">${sale.total_price}</span>
+          </div>
+
+          <div className="ticket-actions">
+            <button className="button ticket-close" onClick={HandleCloseSale}>
               Cerrar venta
             </button>
             <button className="button-cancel" onClick={handleCancelSale}>
               Cancelar venta completa
             </button>
           </div>
-        </>
+        </div>
       )}
-      {error && <p className="error-message">{error}</p>}
-      {message && <p className="success-message">{message}</p>}
-      {messageCancel && <p className="success-message">{messageCancel}</p>}
+
+      {message && <p className="success-message scan-msg">{message}</p>}
+      {messageCancel && (
+        <p className="success-message scan-msg">{messageCancel}</p>
+      )}
     </section>
   );
 }

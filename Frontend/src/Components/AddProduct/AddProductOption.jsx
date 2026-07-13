@@ -2,6 +2,7 @@ import { useState } from "react";
 import Nav from "../Nav/nav.jsx";
 import "./AddProductOption.css";
 import addProductValidation from "./Validation.jsx";
+import { Plus } from "lucide-react";
 
 const BASE_URL = import.meta.env.PROD ? "" : "http://localhost:8000";
 
@@ -85,11 +86,16 @@ function AddProductOption() {
 
       <form onSubmit={handleSubmit} className="option-form">
         <div className="box-title">
-          <h2 className="title">Agregar productos</h2>
-          <p className="description">
-            Ingresa los datos del producto para crear un nuevo registro en el
-            inventario.
-          </p>
+          <span className="box-title-icon" aria-hidden="true">
+            <Plus></Plus>
+          </span>
+          <div className="box-title-text">
+            <h2 className="title">Agregar productos</h2>
+            <p className="description">
+              Ingresa los datos del producto para crear un nuevo registro en el
+              inventario.
+            </p>
+          </div>
         </div>
         <div className="form-fields">
           <div className="container-label">

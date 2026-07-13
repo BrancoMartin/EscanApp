@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import "./start.css";
 import AgentChat from "../Components/AgentChat/AgentChat";
+import { ScanLine, Plus, Calendar } from "lucide-react";
 
 function Start() {
   const [showAgent, setShowAgent] = useState(false);
@@ -20,19 +21,19 @@ function Start() {
       <div className="start-actions">
         <button onClick={() => navigate("/add-product")}>
           <span className="button-icon" aria-hidden="true">
-            📦
+            <Plus size={28} color="#000c66"></Plus>
           </span>
           <span className="button-start">Agregar Producto</span>
         </button>
         <button onClick={() => navigate("/sales-history")}>
           <span className="button-icon" aria-hidden="true">
-            📊
+            <Calendar size={28} color="#000c66"></Calendar>
           </span>
           <span className="button-start">Historial de Ventas</span>
         </button>
         <button onClick={() => navigate("/scan-products")}>
           <span className="button-icon" aria-hidden="true">
-            📷
+            <ScanLine size={28} color="#000c66"></ScanLine>
           </span>
           <span className="button-start">Escanear Productos</span>
         </button>

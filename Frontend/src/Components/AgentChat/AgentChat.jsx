@@ -90,6 +90,19 @@ function AgentChat({ onClose }) {
     scrollToBottom();
   }, [messages]);
 
+  // Mantiene el cursor siempre parpadeando en el input: al abrir el chat y
+  // cada vez que el asistente termina de responder (cuando loading vuelve a false).
+  useEffect(() => {
+    if (!loading) {
+      const t = setTimeout(() => inputRef.current?.focus(), 0);
+      return () => clearTimeout(t);
+    }
+  }, [loading]);
+
+  const keepFocus = () => {
+    if (!loading) setTimeout(() => inputRef.current?.focus(), 0);
+  };
+
   useEffect(() => {
     localStorage.setItem("agentChatContext", JSON.stringify(context));
   }, [context]);
@@ -279,8 +292,10 @@ function AgentChat({ onClose }) {
             ref={inputRef}
             type="text"
             value={input}
+            autoFocus
             onChange={handleChange}
             onKeyDown={handleKeyDown}
+            onBlur={keepFocus}
             placeholder="Escribe o escanea un codigo de barras..."
             disabled={loading}
             className={`chat-input ${isBarcode ? "barcode-scanner" : ""}`}
