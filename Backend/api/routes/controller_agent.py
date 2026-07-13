@@ -213,6 +213,24 @@ def _enriquecer_producto_con_atributos(db: Session, product: Product, user_messa
     return contados
 
 
+# Verbos que identifican SIN AMBIGUEDAD un ajuste de precios. Se usan para el
+# fast-path deterministico: si el mensaje trae uno de estos, resolvemos el
+# intent sin llamar al clasificador Ollama (que es la parte mas lenta por la
+# carga/swap de modelos). Definidos a nivel de modulo para reusarlos antes y
+# despues de la clasificacion.
+PRECIO_CMD = frozenset({
+    'aumentame', 'aumenta', 'aumentá', 'aumentales', 'aumentale',
+    'subime', 'subi', 'subí', 'sube', 'subile', 'subiles',
+    'incrementame', 'incrementa', 'incrementá',
+    'bajame', 'baja', 'bajá', 'bajale', 'bajales',
+    'disminuime', 'disminui', 'disminuí', 'disminuye',
+    'reducime', 'reduci', 'reducí', 'reduce',
+    'descontame', 'desconta', 'descontá', 'descuentame',
+    'rebajame', 'rebaja', 'rebajá', 'sacale', 'sacales'
+})
+PRECIO_INF = frozenset({'aumentar', 'subir', 'incrementar', 'bajar', 'disminuir', 'reducir', 'descontar', 'rebajar'})
+
+
 class ChatMessage(BaseModel):
     message: str
     conversation_history: list = []
@@ -447,11 +465,22 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
                 data={"barcode": bc_raw, "awaiting_name": True}
             )
 
-        # --- Flujo normal: clasificar intent ---
-        intent_result = detect_intent(user_message)
-        intent = intent_result.get("intent") if type(intent_result) == dict else intent_result
-
-        print(f"[AGENT] Intent: {intent}")
+        # --- Clasificar intent ---
+        # Fast-path DETERMINISTICO: si el mensaje es claramente un ajuste de
+        # precios (verbo imperativo, o verbo infinitivo + porcentaje) NO llamamos
+        # al clasificador Ollama. Esa llamada es la principal fuente de lentitud
+        # (carga y swap de modelos en cada request). Para el resto de intents
+        # seguimos usando el modelo.
+        intent_result = {}
+        _palabras_intent = set(re.findall(r'\w+', user_message.lower()))
+        _pct_intent = bool(re.search(r'\d+\s*%|\d+\s*por\s*ciento', user_message, re.IGNORECASE))
+        if (_palabras_intent & PRECIO_CMD) or ((_palabras_intent & PRECIO_INF) and _pct_intent):
+            intent = "ajustar_precios"
+            print("[AGENT] Intent deterministico (sin modelo) -> ajustar_precios")
+        else:
+            intent_result = detect_intent(user_message)
+            intent = intent_result.get("intent") if type(intent_result) == dict else intent_result
+            print(f"[AGENT] Intent: {intent}")
 
         # --- Asignacion manual de producto a atributo (deterministico) ---
         # "asigna el producto X al atributo Y". No depende del clasificador ni
@@ -523,17 +552,7 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
         # El clasificador (Ollama 0.5b) es poco fiable: a veces manda un ajuste
         # claro a consulta_general. Si el mensaje trae un verbo imperativo de
         # ajuste de precios, forzamos ajustar_precios sin depender del modelo.
-        PRECIO_CMD = {
-            'aumentame', 'aumenta', 'aumentá', 'aumentales', 'aumentale',
-            'subime', 'subi', 'subí', 'sube', 'subile', 'subiles',
-            'incrementame', 'incrementa', 'incrementá',
-            'bajame', 'baja', 'bajá', 'bajale', 'bajales',
-            'disminuime', 'disminui', 'disminuí', 'disminuye',
-            'reducime', 'reduci', 'reducí', 'reduce',
-            'descontame', 'desconta', 'descontá', 'descuentame',
-            'rebajame', 'rebaja', 'rebajá', 'sacale', 'sacales'
-        }
-        PRECIO_INF = {'aumentar', 'subir', 'incrementar', 'bajar', 'disminuir', 'reducir', 'descontar', 'rebajar'}
+        # (PRECIO_CMD / PRECIO_INF estan definidos a nivel de modulo.)
         _palabras_msg = set(re.findall(r'\w+', user_message.lower()))
         _tiene_pct = bool(re.search(r'\d+\s*%|\d+\s*por\s*ciento', user_message, re.IGNORECASE))
         if intent not in ("ajustar_precios", "aumentar_precios", "crear_productos", "crear_categoria", "agregar_atributo"):
@@ -547,23 +566,37 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
         if intent in ("ajustar_precios", "aumentar_precios"):
             print("ENTRO EN AJUSTAR_PRECIOS")
 
-            price_type_result = detect_price_increase_type(user_message)
-            tipo = price_type_result.get("tipo")
-            porcentaje = price_type_result.get("porcentaje")
-            operacion = str(price_type_result.get("operacion") or "aumento").strip().lower()
-            attribute = price_type_result.get("attribute") or price_type_result.get("value")
+            # === Extraccion DETERMINISTICA del ajuste (sin modelo) ===
+            # El porcentaje casi siempre viene explicito ("... un 30%"), y la
+            # operacion (aumento/disminucion) se deriva del verbo. Cuando tenemos
+            # el porcentaje NO llamamos a IncreaseDetector (Ollama), que es lento
+            # por la carga/swap de modelos. tipo y attribute se derivan por regex
+            # mas abajo; el modelo queda solo como fallback si falta el %.
+            porcentaje = None
+            m_pct = re.search(r'(\d+(?:[.,]\d+)?)\s*%', user_message)
+            if not m_pct:
+                m_pct = re.search(r'(\d+(?:[.,]\d+)?)\s*por\s*ciento', user_message, re.IGNORECASE)
+            if m_pct:
+                porcentaje = float(m_pct.group(1).replace(",", "."))
 
-            print("RESULTADO DEL DETECT_PRICE_INCREASE_TYPE", price_type_result)
+            tipo = None
+            attribute = None
+            operacion = "aumento"
 
-            # --- Garantia deterministica del porcentaje ---
-            # IncreaseDetector (0.5b) a veces no devuelve el porcentaje aunque
-            # este explicito en el mensaje ("... un 30%"). Lo extraemos por regex.
-            if not porcentaje:
-                m_pct = re.search(r'(\d+(?:[.,]\d+)?)\s*%', user_message)
-                if not m_pct:
-                    m_pct = re.search(r'(\d+(?:[.,]\d+)?)\s*por\s*ciento', user_message, re.IGNORECASE)
-                if m_pct:
-                    porcentaje = float(m_pct.group(1).replace(",", "."))
+            # "todos/todas los productos" -> ajuste global (deterministico)
+            if re.search(r'\btod[oa]s?\b', user_message, re.IGNORECASE) and not re.search(r'proveedor', user_message, re.IGNORECASE):
+                tipo = "todos"
+
+            # Fallback al modelo SOLO si no pudimos extraer el porcentaje. En el
+            # caso comun (porcentaje explicito) esta llamada NO se ejecuta.
+            if porcentaje is None:
+                price_type_result = detect_price_increase_type(user_message)
+                print("RESULTADO DEL DETECT_PRICE_INCREASE_TYPE", price_type_result)
+                porcentaje = price_type_result.get("porcentaje")
+                if not tipo:
+                    tipo = price_type_result.get("tipo")
+                attribute = price_type_result.get("attribute") or price_type_result.get("value")
+                operacion = str(price_type_result.get("operacion") or "aumento").strip().lower()
 
             # --- Operacion derivada del verbo (mas fiable que el modelo 0.5b) ---
             if re.search(r'\b(baj\w*|disminu\w*|reduc\w*|descont\w*|rebaj\w*|sacale\w*|descuent\w*)\b', user_message, re.IGNORECASE):
@@ -730,6 +763,48 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
                     categoria_existe = True
                     cat = None
                 else:
+                    # === Resolucion DETERMINISTICA contra la DB (sin modelo) ===
+                    # Antes de gastar una llamada a Ollama (lenta), intentamos
+                    # resolver el objetivo directamente: como CATEGORIA con ese
+                    # nombre, o como PRODUCTO por nombre. Cubre el caso comun
+                    # ("aumentame la leche un 30%") sin ningun modelo.
+                    cat_det = db.query(Category).filter(Category.name.ilike(f"%{attribute}%")).first()
+                    if cat_det:
+                        attrs_det = db.query(Attribute).filter(Attribute.category_id == cat_det.id).all()
+                        attr_ids_det = [a.id for a in attrs_det]
+                        pids_det = []
+                        if attr_ids_det:
+                            pas_det = db.query(ProductAttribute).filter(
+                                ProductAttribute.attribute_id.in_(attr_ids_det)
+                            ).all()
+                            pids_det = list(set(pa.product_id for pa in pas_det))
+                        if pids_det:
+                            prods_det = db.query(Product).filter(Product.id.in_(pids_det)).all()
+                            for p in prods_det:
+                                p.price = round(p.price * factor, 2)
+                            db.commit()
+                            return AgentResponse(
+                                message=f"Se {verbo} un {porcentaje}% a {len(prods_det)} producto(s) de la categoria '{cat_det.name}'",
+                                action_executed="ajustar_precios",
+                                success=True,
+                                data={"updated_products": len(prods_det), "category": cat_det.name, "percentage": porcentaje}
+                            )
+
+                    prods_nombre = db.query(Product).filter(Product.name.ilike(f"%{attribute}%")).all()
+                    if prods_nombre:
+                        for p in prods_nombre:
+                            p.price = round(p.price * factor, 2)
+                        db.commit()
+                        names = ", ".join([p.name for p in prods_nombre])
+                        return AgentResponse(
+                            message=f"Se {verbo} el precio de '{names}' ({len(prods_nombre)} producto(s)) un {porcentaje}%",
+                            action_executed="ajustar_precios",
+                            success=True,
+                            data={"updated_products": len(prods_nombre), "percentage": porcentaje, "products": names}
+                        )
+
+                    # Ultimo recurso: modelo para inferir categoria/valor de un
+                    # objetivo que no matchea nada en la DB.
                     cats = db.query(Category).all()
                     existing_categories = [{"id": c.id, "name": c.name} for c in cats]
 
