@@ -1,9 +1,9 @@
 import { NavLink } from "react-router-dom";
 import "./nav.css";
-import { ScanLine, Plus, Calendar } from "lucide-react";
+import { ScanLine, Plus, Calendar, House, Clock } from "lucide-react";
 
 const links = [
-  { to: "/", label: "Inicio", icon: "🏠", end: true },
+  { to: "/", label: "Inicio", icon: <House></House>, end: true },
   { to: "/add-product", label: "Agregar producto", icon: <Plus></Plus> },
   {
     to: "/scan-products",
@@ -15,7 +15,7 @@ const links = [
     label: "Historial de ventas",
     icon: <Calendar></Calendar>,
   },
-  { to: "/last-sales", label: "Últimas 24 hs", icon: "🕒" },
+  { to: "/last-sales", label: "Últimas 24 hs", icon: <Clock></Clock> },
 ];
 
 function Nav() {

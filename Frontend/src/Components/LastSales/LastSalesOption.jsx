@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import Nav from "../Nav/nav";
 import "./LastSalesOption.css";
+import { History, Clock } from "lucide-react";
 
 const BASE_URL = import.meta.env.PROD ? "" : "http://localhost:8000";
 
@@ -31,7 +32,7 @@ function LastSalesOption() {
       <div className="option-form">
         <div className="box-title">
           <span className="box-title-icon" aria-hidden="true">
-            🕒
+            <Clock></Clock>
           </span>
           <div className="box-title-text">
             <h2 className="title">Ventas de las últimas 24 hs</h2>
@@ -48,7 +49,9 @@ function LastSalesOption() {
           <p className="error-message">{error}</p>
         ) : history.length === 0 ? (
           <div className="empty-state">
-            <span className="empty-icon">🕒</span>
+            <span className="empty-icon">
+              <Clock></Clock>
+            </span>
             <p className="empty-text">
               No hay ventas registradas en las últimas 24 horas.
             </p>
@@ -77,36 +80,36 @@ function LastSalesOption() {
               </div>
             </div>
             <div className="history-table-wrapper">
-            <table className="history-table">
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Fecha</th>
-                  <th>Total</th>
-                  <th>Items</th>
-                  <th>Estado</th>
-                </tr>
-              </thead>
-              <tbody>
-                {history.map((sale) => (
-                  <tr key={sale.id}>
-                    <td>{sale.id}</td>
-                    <td>{sale.created_at}</td>
-                    <td>${sale.total_price}</td>
-                    <td>{sale.items.length}</td>
-                    <td>
-                      <span
-                        className={`sale-pill ${
-                          sale.state === "closed" ? "closed" : "open"
-                        }`}
-                      >
-                        {sale.state === "closed" ? "Cerrada" : "Abierta"}
-                      </span>
-                    </td>
+              <table className="history-table">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Fecha</th>
+                    <th>Total</th>
+                    <th>Items</th>
+                    <th>Estado</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {history.map((sale) => (
+                    <tr key={sale.id}>
+                      <td>{sale.id}</td>
+                      <td>{sale.created_at}</td>
+                      <td>${sale.total_price}</td>
+                      <td>{sale.items.length}</td>
+                      <td>
+                        <span
+                          className={`sale-pill ${
+                            sale.state === "closed" ? "closed" : "open"
+                          }`}
+                        >
+                          {sale.state === "closed" ? "Cerrada" : "Abierta"}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </>
         )}

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import "./AgentChat.css";
+import { Bot, User, Trash } from "lucide-react";
 
 const BASE_URL = import.meta.env.PROD ? "" : "http://localhost:8000";
 
@@ -240,7 +241,7 @@ function AgentChat({ onClose }) {
             onClick={handleClearChat}
             title="Limpiar chat"
           >
-            🗑️
+            <Trash></Trash>
           </button>
           <button className="close-btn" onClick={onClose} title="Cerrar chat">
             ✕
@@ -257,7 +258,11 @@ function AgentChat({ onClose }) {
             <div className="message-content">
               {msg.type === "assistant" && <span className="avatar">🤖</span>}
               <div className="message-text">{msg.text}</div>
-              {msg.type === "user" && <span className="avatar">👤</span>}
+              {msg.type === "user" && (
+                <span className="avatar">
+                  <User></User>
+                </span>
+              )}
             </div>
             {msg.actionExecuted && (
               <div className="action-badge">
@@ -270,7 +275,9 @@ function AgentChat({ onClose }) {
         {loading && (
           <div className="message assistant loading">
             <div className="message-content">
-              <span className="avatar avatar-thinking">🤖</span>
+              <span className="avatar avatar-thinking">
+                <Bot></Bot>
+              </span>
               <div className="thinking-bubble">
                 <div className="typing-indicator">
                   <span></span>

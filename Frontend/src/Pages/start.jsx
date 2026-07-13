@@ -2,7 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import "./start.css";
 import AgentChat from "../Components/AgentChat/AgentChat";
-import { ScanLine, Plus, Calendar } from "lucide-react";
+import { ScanLine, Plus, Calendar, Bot } from "lucide-react";
 
 function Start() {
   const [showAgent, setShowAgent] = useState(false);
