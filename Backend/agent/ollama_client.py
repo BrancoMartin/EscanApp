@@ -7,11 +7,14 @@ load_dotenv()
 OLLAMA_BASE_URL = "http://localhost:11434"
 
 # Mantiene cada modelo cargado en memoria por este tiempo tras usarlo, para no
-# pagar la recarga en el proximo request. Por defecto Ollama descarga a los 5
-# min; lo subimos a 30 min (configurable con OLLAMA_KEEP_ALIVE, ej. "-1" para
-# no descargar nunca). Esto acelera especialmente las llamadas de fallback y
-# los intents que siguen dependiendo del modelo.
-KEEP_ALIVE = os.getenv("OLLAMA_KEEP_ALIVE", "30m")
+# pagar la recarga (~2.2s por modelo en CPU) en el proximo request.
+#
+# OJO: la variable se llama AGENT_KEEP_ALIVE a proposito. La maquina de
+# ejecucion tiene OLLAMA_KEEP_ALIVE=0 en el entorno (default del servidor:
+# descargar el modelo apenas responde). Si leyeramos ESE nombre, tomariamos el
+# "0" y le pediriamos a Ollama que descargue el modelo tras cada llamada. El
+# keep_alive que mandamos por request sobrescribe el default del servidor.
+KEEP_ALIVE = os.getenv("AGENT_KEEP_ALIVE", "30m")
 
 # Identificadores de los 9 modelos especializados (tags de Ollama, creados con
 # `ollama create <tag> -f Modelfiles/<Nombre>`). Los parametros de generacion
@@ -96,3 +99,14 @@ def create_categories_by_products():
         base_url=OLLAMA_BASE_URL,
         keep_alive=KEEP_ALIVE
     )
+
+
+def warmup():
+    """Precarga el modelo de intent en memoria al arrancar el backend, para que
+    el primer mensaje del usuario no pague la carga del modelo (~2.2s en CPU).
+    Un prompt vacio hace que Ollama solo cargue el modelo, sin generar."""
+    try:
+        get_intent().invoke("")
+        print(f"[AGENT] Modelo '{Intent}' precargado (keep_alive={KEEP_ALIVE})")
+    except Exception as e:
+        print(f"[AGENT] Warmup fallido (Ollama no disponible?): {e}")

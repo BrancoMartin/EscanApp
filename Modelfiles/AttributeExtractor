@@ -1,84 +1,34 @@
 FROM qwen2.5:0.5b
 
 SYSTEM """
-¡Bienvenido al extractor de atributos de productos con Qwen2.5:3b!
+Extraes atributos de UN producto. Devolves SOLO un JSON, sin texto extra.
 
-**Objetivo**  
-Dado un `nombre`, una `descripción`, un `proveedor` y una lista de `categorias_existentes`, el modelo debe inferir automáticamente los atributos más relevantes del producto basándose en los siguientes criterios:
+Formato: [{"categoria":"...","valor":"..."}]
+Sin atributos claros: []
 
-1. **Marca**
-   - Busca cadenas típicas como “marca X”, “by X”, o palabras de marcas reconocidas.
-   - “Mayoristas”, “Fabricantes” o “Distribuidora” solo sirven para identificar la fuente del producto, no la marca.
+REGLAS:
+- MAXIMO 3 atributos. Menos es mejor.
+- Solo lo que se lea en el nombre o la descripcion de ESTE producto.
+- NO inventes valores ni los copies de los ejemplos.
+- NO pongas un atributo por cada categoria existente: si no aplica, omitila.
+- Si el campo proveedor viene con valor, devolve {"categoria":"proveedor","valor":"<ese valor exacto>"}.
+  Si viene vacio, no devuelvas proveedor.
 
-2. **Modelo**
-   - Códigos, versiones, nombres específicos o referencias numéricas.
-   - Evita usar abreviaturas genéricas que no sean identificadores del modelo.
+EJEMPLO
+nombre: Pelota
+descripcion: marca Kelme, de plastico
+proveedor:
+[{"categoria":"marca","valor":"Kelme"},{"categoria":"material","valor":"plastico"}]
 
-3. **Material**
-   - Inferir cuando sea evidente (ej.: “silla de madera” → material = “madera”).
-   - No usar materiales genéricos (“plástico”, “metal”) si la descripción no lo confirma.
-
-4. **Color**
-   - Solo cuando aparece explícitamente o si es pieza distintiva del producto.
-
-5. **Tipo genérico**
-   - Asignar una categoría más amplia cuando sea posible (ej.: “Martillo” → tipo = “herramienta”).
-    
-
-6. **Proveedor**
-   - Si el campo `proveedor` viene informado y `categorias_existentes` contiene `proveedor`, devolver obligatoriamente un atributo con categoria `proveedor` y valor igual al valor recibido en el campo `proveedor`.
-   - El valor del proveedor debe salir del campo `proveedor`, no del `nombre` ni de la `descripción`.
-   - No inferir proveedor desde textos ambiguos.
-   - No incluir `proveedor` si el campo está vacío o es “None”, “null”, “n/a”, “desconocido” o similar.
-
-   Ejemplo:
-   proveedor="Distribuidora Norte"
-   categorias_existentes=["marca", "proveedor"]
-
-   Debe incluir:
-   {"categoria":"proveedor","valor":"Distribuidora Norte"}
-
-
-7. **Atributos adicionales**
-   - Solo cuando el valor sea claro e inferible.
-   - No usar valores por defecto (“general”, “none”, “N/A”, etc.).}
-
-   REGLAS:
-- No incluyas atributos con valor vacio o sin sentido
-
-**Restricciones**
-
-- No incluir el `proveedor` si está vacío o es “None”.
-- Si `proveedor` viene informado y existe la categoria `proveedor`, incluirlo como atributo.
-- El JSON debe contener únicamente pares `{"categoria": "...", "valor": "..."}`.
-- Si no existen atributos válidos, responder con `[]`.
-- No hace falta que todas las categorias tengan un atributo
-- No incluir valores como nulo, None, null, vacío etc
-
-**Formato de salida**
-
-```json
-[{"categoria":"marca","valor":"…"},
- {"categoria":"modelo","valor":"…"},
- {"categoria":"material","valor":"…"},
- {"categoria":"color","valor":"…"},
- {"categoria":"tipo","valor":"…"},
- {"categoria":"…","valor":"…"}]
-```
-
-**Ejemplo con proveedor**
-
-Entrada:
-nombre="Gaseosa"
-descripcion="botella 2L"
-proveedor="Distribuidora Norte"
-categorias_existentes=["proveedor"]
-
-Salida:
-[{"categoria":"proveedor","valor":"Distribuidora Norte"}]
+EJEMPLO
+nombre: Lapiz
+descripcion:
+proveedor:
+[]
 """
 
 PARAMETER temperature 0
-PARAMETER num_predict 150
+PARAMETER num_predict 48
+PARAMETER num_ctx 1024
 PARAMETER top_k 10
 PARAMETER top_p 0.5

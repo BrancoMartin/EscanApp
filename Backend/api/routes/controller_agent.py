@@ -7,7 +7,10 @@ from Backend.models.category import Category
 from Backend.models.attribute import Attribute
 from Backend.models.product_attribute import ProductAttribute
 from Backend.models.product import Product
+from Backend.models.sale import Sale
+from Backend.models.item_sale import SaleItem
 from dotenv import load_dotenv
+from datetime import datetime, timedelta
 import os
 import re
 
@@ -17,7 +20,6 @@ from Backend.agent.model2b_price_type import detect_price_increase_type
 from Backend.agent.model3_detect_attr import detect_category_and_value
 from Backend.agent.model5_incomplete import handle_incomplete_info
 from Backend.agent.model6_general import handle_general_query
-from Backend.agent.model4_resolve_attr import resolve_attribute_in_db
 from Backend.agent.model_attribute_extractor import attribute_extractor
 from Backend.agent.model_create_categories import create_categories
 from Backend.services.attribute_service import AttributeService
@@ -35,6 +37,11 @@ _NULL_SYNONYMS = frozenset({
 def _is_valid_str(v):
     return type(v) == str and v.strip().lower() not in _NULL_SYNONYMS
 
+
+# Tope de categorias que se le muestran a AttributeExtractor. Cada categoria de
+# mas es prompt eval (tiempo directo en CPU) y le da al 0.5b una excusa para
+# inventar un atributo mas.
+MAX_CATEGORIAS_PROMPT = 12
 
 _UNIDADES = r'(?:unidad|unidades|litro|litros|kilo|kilos|kg|gramo|gramos|gr|ml|cc|cm|metro|metros|docena|pack)'
 
@@ -160,28 +167,64 @@ def clear_pending_product(session_id: str):
     _pending_products.pop(session_id, None)
 
 
+def _asignar_atributos_existentes(db: Session, product: Product) -> int:
+    """Vincula el producto nuevo a los atributos que YA existen y aparecen en su
+    nombre o descripcion. Deterministico, sin modelo. Es la otra mitad de
+    `agregar_atributo`: si el usuario creo el atributo 'galletas' cuando todavia
+    no tenia productos, el producto que cree despues lo toma solo."""
+    asignados = 0
+    for a in db.query(Attribute).all():
+        if not _match_productos_por_valor([product], a.name):
+            continue
+        existe = db.query(ProductAttribute).filter_by(product_id=product.id, attribute_id=a.id).first()
+        if not existe:
+            db.add(ProductAttribute(product_id=product.id, attribute_id=a.id))
+            asignados += 1
+    if asignados:
+        db.commit()
+    return asignados
+
+
 def _enriquecer_producto_con_atributos(db: Session, product: Product, user_message: str = ""):
     proveedor = product.proveedor or ""
 
-    # Si el proveedor viene informado, aseguramos que exista la categoria
-    # "proveedor" (y otras inferibles) ANTES de extraer atributos, para que
-    # AttributeExtractor pueda devolver el atributo de proveedor (SDD ai-agent).
+    # Primero lo que la BD ya sabe (sin modelo): atributos existentes que el
+    # producto menciona en su nombre o descripcion.
+    _asignar_atributos_existentes(db, product)
+
+    # Si el proveedor viene informado, la categoria "proveedor" debe existir ANTES
+    # de extraer atributos, para que AttributeExtractor devuelva el atributo de
+    # proveedor (SDD ai-agent). Que la categoria se llama "proveedor" ya lo
+    # sabemos: no hace falta preguntarselo a un modelo. Lo hacemos deterministico
+    # y nos ahorramos una llamada a CreateCategories (~1.5s) en cada creacion.
     if _is_valid_str(proveedor):
-        cats_actuales = [c.name for c in db.query(Category).all()]
-        nuevas = create_categories(product.name, product.description or "", proveedor, cats_actuales)
+        existe_cat = db.query(Category).filter(Category.name == "proveedor").first()
+        if not existe_cat:
+            db.add(Category(name="proveedor"))
+            db.commit()
+
+    # Acotamos las categorias que ve el modelo: cuantas mas le pasamos, mas
+    # atributos inventa (emitia uno por categoria), agotando num_predict. La
+    # categoria "proveedor" tiene que estar si el proveedor vino informado.
+    cats = db.query(Category).all()
+    cats_list = [c.name for c in cats][:MAX_CATEGORIAS_PROMPT]
+    if _is_valid_str(proveedor) and "proveedor" not in cats_list:
+        cats_list.append("proveedor")
+
+    # OJO: AttributeExtractor espera la lista de categorias (no un string),
+    # para poder agregar el proveedor de forma deterministica.
+    atributos_extra = attribute_extractor(product.name, product.description or "", cats_list, proveedor)
+
+    # Fallback: si el extractor no infirio ningun atributo, pedimos a
+    # CreateCategories que bootstrapee categorias para los proximos productos.
+    if not atributos_extra:
+        nuevas = create_categories(product.name, product.description or "", proveedor, cats_list)
         for nombre_cat in nuevas.get("categorias_nuevas", []):
             if _is_valid_str(nombre_cat):
                 existe_cat = db.query(Category).filter(Category.name == nombre_cat).first()
                 if not existe_cat:
                     db.add(Category(name=nombre_cat))
         db.commit()
-
-    cats = db.query(Category).all()
-    cats_list = [c.name for c in cats]
-    # OJO: AttributeExtractor espera la lista de categorias (no un string),
-    # para poder agregar el proveedor de forma deterministica.
-    atributos_extra = attribute_extractor(product.name, product.description or "", cats_list, proveedor)
-    if not atributos_extra:
         return 0
     contados = 0
     for attr in atributos_extra:
@@ -229,6 +272,289 @@ PRECIO_CMD = frozenset({
     'rebajame', 'rebaja', 'rebajá', 'sacale', 'sacales'
 })
 PRECIO_INF = frozenset({'aumentar', 'subir', 'incrementar', 'bajar', 'disminuir', 'reducir', 'descontar', 'rebajar'})
+
+
+# Fast-paths de intent: el clasificador Ollama es una carga de modelo (~1s aun
+# en caliente) que se puede evitar cuando el mensaje trae un marcador inequivoco
+# de accion. Misma estrategia que ya hizo rapido al flujo de precios. Lo que no
+# matchea sigue yendo al clasificador (red de seguridad).
+_LISTAR_VERBO = r'\b(?:listame|listar|lista|listá|mostrame|mostrar|mostra|mostrá|muestra|dame|decime|ver)\b'
+_LISTAR_PREGUNTA = r'\b(?:que|qué|cuales|cuáles)\b.*\b(?:tengo|hay|existen|tenemos)\b'
+_CREAR_VERBO = r'\b(?:creame|crearme|crear|crea|creá|crealo|nueva|nuevo|agregame|agregar|agrega|agregá|agregale|añadir|añade|añadime|sumar|sumame|registrar|registrame)\b'
+
+
+# Tope de productos que se listan en los datos del asesor. Cada linea es prompt
+# eval (tiempo directo en CPU). Las preguntas factuales ya las responde la BD sin
+# modelo, asi que al asesor le alcanza con una muestra para dar contexto.
+MAX_PRODUCTOS_STATS = 6
+
+
+def _normalizar(texto: str) -> str:
+    """Minusculas y sin acentos, para comparar texto del usuario contra la BD."""
+    t = (texto or "").strip().lower()
+    for con_acento, sin_acento in (("á", "a"), ("é", "e"), ("í", "i"), ("ó", "o"), ("ú", "u"), ("ü", "u")):
+        t = t.replace(con_acento, sin_acento)
+    return t
+
+
+def _raiz(palabra: str) -> str:
+    """Raiz aproximada: saca el plural para que 'galletas' matchee 'galleta'."""
+    p = _normalizar(palabra)
+    if len(p) > 4 and p.endswith("es"):
+        return p[:-2]
+    if len(p) > 3 and p.endswith("s"):
+        return p[:-1]
+    return p
+
+
+def _match_productos_por_valor(productos: list, valor: str) -> list:
+    """Productos cuyo nombre o descripcion mencionan el valor del atributo.
+
+    Va mas alla del ILIKE crudo: compara sin acentos y por raiz, asi 'galletas'
+    encuentra 'Galleta rellena' y 'plastico' encuentra 'plástico'. Cuanto mejor
+    resuelve esto la BD, menos veces hay que gastar el modelo."""
+    raices_valor = [_raiz(t) for t in re.findall(r'\w+', valor) if len(t) > 2]
+    if not raices_valor:
+        return []
+
+    encontrados = []
+    for p in productos:
+        texto = _normalizar(f"{p.name} {p.description or ''}")
+        raices_texto = [_raiz(t) for t in re.findall(r'\w+', texto)]
+        # Todas las raices del valor tienen que aparecer en el producto: asi
+        # "galletas de chocolate" no matchea cualquier producto con "chocolate".
+        if all(any(rv == rt or rv in rt for rt in raices_texto) for rv in raices_valor):
+            encontrados.append(p)
+    return encontrados
+
+
+def _ventas_desde(db: Session, desde):
+    """Cantidad de ventas y total facturado desde una fecha (excluye canceladas)."""
+    cantidad, total = db.query(
+        sqlfunc.count(Sale.id),
+        sqlfunc.coalesce(sqlfunc.sum(Sale.total_price), 0.0)
+    ).filter(Sale.created_at >= desde, Sale.state != "cancelled").one()
+    return int(cantidad or 0), round(float(total or 0), 2)
+
+
+def _construir_stats(db: Session, msg: str) -> dict:
+    """Arma los datos que ve GeneralConsultant.
+
+    El modelo no puede acertar lo que no le damos. Antes recibia solo conteos y
+    un mapa de categorias: por eso contestaba "no tengo acceso a las ventas" y
+    llegaba a decir que el producto mas caro era 'material' (que es una
+    CATEGORIA, no un producto). Los numeros se calculan aca, en la BD, y el
+    modelo se limita a redactarlos.
+
+    Las secciones se incluyen segun lo que pregunte el usuario, para no pagar
+    prompt eval de datos que no va a usar."""
+    low = msg.lower()
+    stats = {}
+
+    productos = db.query(Product).order_by(Product.price.desc()).all()
+    stats["total_productos"] = len(productos)
+
+    if productos:
+        caro = productos[0]
+        barato = productos[-1]
+        promedio = sum(p.price for p in productos) / len(productos)
+        stats["producto_mas_caro"] = f"{caro.name} (${caro.price})"
+        stats["producto_mas_barato"] = f"{barato.name} (${barato.price})"
+        stats["precio_promedio"] = round(promedio, 2)
+
+        listado = [f"{p.name}: ${p.price}" for p in productos[:MAX_PRODUCTOS_STATS]]
+        if len(productos) > MAX_PRODUCTOS_STATS:
+            listado.append(f"(y {len(productos) - MAX_PRODUCTOS_STATS} productos mas)")
+        stats["productos"] = "; ".join(listado)
+
+    if re.search(r'vent|vend|factur|ingres|recaud|caj|gan', low):
+        hoy = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        cant_hoy, total_hoy = _ventas_desde(db, hoy)
+        cant_sem, total_sem = _ventas_desde(db, hoy - timedelta(days=7))
+        cant_mes, total_mes = _ventas_desde(db, hoy - timedelta(days=30))
+        stats["ventas_hoy"] = f"{cant_hoy} ventas, ${total_hoy} facturado"
+        stats["ventas_ultimos_7_dias"] = f"{cant_sem} ventas, ${total_sem} facturado"
+        stats["ventas_ultimos_30_dias"] = f"{cant_mes} ventas, ${total_mes} facturado"
+
+        vendidos = db.query(
+            Product.name,
+            sqlfunc.sum(SaleItem.quantity)
+        ).join(
+            SaleItem, SaleItem.product_id == Product.id
+        ).join(
+            Sale, Sale.id == SaleItem.sale_id
+        ).filter(
+            Sale.created_at >= hoy - timedelta(days=30),
+            Sale.state != "cancelled"
+        ).group_by(Product.name).order_by(sqlfunc.sum(SaleItem.quantity).desc()).limit(5).all()
+
+        if vendidos:
+            stats["unidades_vendidas_ultimos_30_dias"] = "; ".join(
+                f"{nombre}: {int(cantidad)}" for nombre, cantidad in vendidos
+            )
+
+    if re.search(r'categor|atribut', low):
+        partes = []
+        for c in db.query(Category).all():
+            n = db.query(Attribute).filter(Attribute.category_id == c.id).count()
+            partes.append(f"{c.name} ({n} atributos)")
+        if partes:
+            stats["categorias"] = "; ".join(partes)
+
+    return stats
+
+
+def _responder_consulta_directa(db: Session, msg: str, stats: dict):
+    """Responde con exactitud las preguntas factuales que la BD ya sabe contestar.
+    Devuelve None si la pregunta no es de este tipo (ahi contesta el asesor).
+
+    Un 0.5b NO es confiable para reportar numeros: copiaba los del ejemplo del
+    prompt (dijo "3 ventas por $6000" con UNA sola venta en la base) y llegaba a
+    decir que el producto mas caro era 'material', que es una categoria. Los
+    hechos los da la BD; el modelo queda para lo abierto (consejos, preguntas
+    que no sabemos calcular)."""
+    low = _normalizar(msg)
+
+    if re.search(r'(cuanto|cuanta|cantidad|numero|total)\w*\s+(de\s+)?(producto|articulo)', low):
+        return f"Tenes {stats.get('total_productos', 0)} producto(s) cargados."
+
+    if re.search(r'(mas caro|mas cara|mayor precio)', low):
+        caro = stats.get("producto_mas_caro")
+        if caro:
+            return f"Tu producto mas caro es {caro}."
+
+    if re.search(r'(mas barato|mas barata|menor precio)', low):
+        barato = stats.get("producto_mas_barato")
+        if barato:
+            return f"Tu producto mas barato es {barato}."
+
+    if re.search(r'promedio', low) and re.search(r'precio|producto', low):
+        prom = stats.get("precio_promedio")
+        if prom is not None:
+            return f"El precio promedio de tus productos es ${prom}."
+
+    if re.search(r'vent|vend|factur|recaud', low):
+        hoy = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        if re.search(r'\bhoy\b|\bdia de hoy\b', low):
+            cant, total = _ventas_desde(db, hoy)
+            if not cant:
+                return "Hoy todavia no registraste ninguna venta."
+            return f"Hoy hiciste {cant} venta(s) por un total de ${total}."
+        if re.search(r'\bsemana\b', low):
+            cant, total = _ventas_desde(db, hoy - timedelta(days=7))
+            return f"En los ultimos 7 dias hiciste {cant} venta(s) por un total de ${total}."
+        if re.search(r'\bmes\b', low):
+            cant, total = _ventas_desde(db, hoy - timedelta(days=30))
+            return f"En los ultimos 30 dias hiciste {cant} venta(s) por un total de ${total}."
+
+    return None
+
+
+# Verbos de gestion: si aparecen, el usuario quiere HACER algo (aunque le falte
+# informacion), no preguntar. Se usan para (a) no confundir un pedido incompleto
+# con una consulta y (b) decidir si responde IncompleteHandler o el asesor general.
+ACCION_VERBOS = frozenset({
+    'aumentar', 'aumentame', 'aumenta', 'aumentá', 'subir', 'subime', 'subi', 'subí', 'sube',
+    'incrementar', 'incrementame', 'incrementa',
+    'bajar', 'bajame', 'baja', 'bajá', 'disminuir', 'disminuime', 'disminui', 'disminuí',
+    'reducir', 'reducime', 'reduci', 'reducí', 'reduce', 'descontar', 'descontame',
+    'rebajar', 'rebajame', 'rebaja',
+    'crear', 'crea', 'creá', 'creame', 'crealo', 'crearme',
+    'agregar', 'agrega', 'agregá', 'agregame', 'agregale', 'agregalo', 'añadir', 'añade', 'sumar',
+    'poner', 'pone', 'poné', 'poneme', 'ponele',
+    'cambiar', 'cambia', 'cambiá', 'modificar', 'modifica', 'modificá',
+    'asignar', 'asigna', 'asigná', 'asignale',
+    'borrar', 'borra', 'borrá', 'borrame', 'eliminar', 'elimina', 'eliminá',
+    'sacar', 'saca', 'sacá', 'sacale',
+    'agrupar', 'agrupa', 'agrupá', 'clasificar', 'clasifica', 'separar', 'ordenar'
+})
+
+
+_PREGUNTA_INICIO = r'^\s*(?:me\s+conviene|conviene|deberia|debería|tengo\s+que|vale\s+la\s+pena|esta\s+bien|está\s+bien|que\s+opinas|qué\s+opinás|que\s+me\s+recomendas|qué\s+me\s+recomendás)\b'
+
+
+def _es_pregunta(msg: str) -> bool:
+    """True si el mensaje es una pregunta (termina en '?' o abre pidiendo opinion)."""
+    t = msg.strip()
+    if t.endswith("?"):
+        return True
+    return bool(re.search(_PREGUNTA_INICIO, t, re.IGNORECASE))
+
+
+def _es_consulta_pura(msg: str) -> bool:
+    """True si el mensaje es una PREGUNTA sobre el negocio y no un pedido de
+    accion. Esos mensajes van directo a `consulta_general` sin gastar el
+    presupuesto de modelo en el clasificador (que ademas se equivocaba: mandaba
+    "cuales fueron las ventas de hoy?" a listar_categorias).
+
+    Es conservador a proposito: un verbo imperativo, un porcentaje o un
+    sustantivo de creacion/listado descartan la consulta pura y dejan que decida
+    el clasificador (red de seguridad)."""
+    low = msg.lower()
+    palabras = set(re.findall(r'\w+', low))
+
+    # Verbo imperativo de precios: es una ORDEN, no una consulta.
+    if palabras & PRECIO_CMD:
+        return False
+    if re.search(r'\d+\s*%|\d+\s*por\s*ciento', low):
+        return False
+    if re.search(r'categor[ií]a|atributo', low):
+        return False
+
+    # Pregunta de opinion sobre precios ("me conviene subir los precios?"): es
+    # una CONSULTA, no una orden. Sin esto caia en ajustar_precios, IncreaseDetector
+    # inventaba un porcentaje y se AUMENTABAN TODOS LOS PRECIOS un 100%.
+    if _es_pregunta(msg) and not re.search(r'\d', low):
+        return True
+
+    if palabras & PRECIO_INF:
+        return False
+    if palabras & ACCION_VERBOS:
+        return False
+    return True
+
+
+def _intent_deterministico(msg: str):
+    """Resuelve el intent por regex, sin modelo. Devuelve None si el mensaje no
+    trae un marcador inequivoco (entonces decide el clasificador Ollama).
+
+    Cuando el mensaje nombra varios sustantivos (producto / categoria /
+    atributo), gana el que aparece PRIMERO: "creame la categoria X para mis
+    productos" -> crear_categoria; "creame el producto X de la categoria Y" ->
+    crear_productos."""
+    low = msg.lower()
+
+    m_cat = re.search(r'categor[ií]as?', low)
+    m_attr = re.search(r'atributos?', low)
+    m_prod = re.search(r'(?:productos?|art[ií]culos?)', low)
+
+    tiene_crear = bool(re.search(_CREAR_VERBO, low))
+
+    # Listar categorias/atributos: verbo de listado, sin verbo de creacion.
+    if (m_cat or m_attr) and not tiene_crear:
+        if re.search(_LISTAR_VERBO, low) or re.search(_LISTAR_PREGUNTA, low):
+            return "listar_categorias"
+
+    # Con un porcentaje explicito el mensaje puede ser un ajuste de precios
+    # ("agregale un 10% a los productos"): no lo tratamos como creacion.
+    if re.search(r'\d+\s*%|\d+\s*por\s*ciento', low):
+        return None
+
+    empieza_producto = bool(re.match(r'^\s*(?:producto|art[ií]culo)s?\b', low))
+    if not tiene_crear and not empieza_producto:
+        return None
+
+    candidatos = []
+    if m_attr:
+        candidatos.append((m_attr.start(), "agregar_atributo"))
+    if m_cat:
+        candidatos.append((m_cat.start(), "crear_categoria"))
+    if m_prod:
+        candidatos.append((m_prod.start(), "crear_productos"))
+    if not candidatos:
+        return None
+    candidatos.sort()
+    return candidatos[0][1]
 
 
 class ChatMessage(BaseModel):
@@ -465,26 +791,12 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
                 data={"barcode": bc_raw, "awaiting_name": True}
             )
 
-        # --- Clasificar intent ---
-        # Fast-path DETERMINISTICO: si el mensaje es claramente un ajuste de
-        # precios (verbo imperativo, o verbo infinitivo + porcentaje) NO llamamos
-        # al clasificador Ollama. Esa llamada es la principal fuente de lentitud
-        # (carga y swap de modelos en cada request). Para el resto de intents
-        # seguimos usando el modelo.
-        intent_result = {}
-        _palabras_intent = set(re.findall(r'\w+', user_message.lower()))
-        _pct_intent = bool(re.search(r'\d+\s*%|\d+\s*por\s*ciento', user_message, re.IGNORECASE))
-        if (_palabras_intent & PRECIO_CMD) or ((_palabras_intent & PRECIO_INF) and _pct_intent):
-            intent = "ajustar_precios"
-            print("[AGENT] Intent deterministico (sin modelo) -> ajustar_precios")
-        else:
-            intent_result = detect_intent(user_message)
-            intent = intent_result.get("intent") if type(intent_result) == dict else intent_result
-            print(f"[AGENT] Intent: {intent}")
-
         # --- Asignacion manual de producto a atributo (deterministico) ---
         # "asigna el producto X al atributo Y". No depende del clasificador ni
         # de ningun modelo: el usuario dice explicitamente producto y atributo.
+        # Va ANTES de clasificar el intent: si matchea, la respuesta sale sin
+        # invocar ningun modelo (antes se clasificaba primero y esa llamada se
+        # tiraba a la basura al entrar aca).
         asign = _parse_asignar_producto_atributo(user_message)
         if asign and _is_valid_str(asign.get("producto")) and _is_valid_str(asign.get("target")):
             prod_nombre = asign["producto"]
@@ -548,6 +860,35 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
                 data={"attribute_id": av.id, "attribute": av.name, "productos_asignados": asignados, "productos": nombres}
             )
 
+        # --- Clasificar intent ---
+        # Presupuesto: COMO MAXIMO 1 modelo por request. En esta maquina (CPU, sin
+        # GPU, RAM justa) Ollama mantiene un solo modelo residente: usar 2 modelos
+        # distintos en un request hace que se expulsen mutuamente y cada uno se
+        # recargue de disco. Por eso el intent se resuelve por regex siempre que
+        # el mensaje traiga un marcador inequivoco, y las consultas puras van
+        # directo al asesor general sin gastar el presupuesto en el clasificador.
+        intent_result = {}
+        _palabras_intent = set(re.findall(r'\w+', user_message.lower()))
+        _pct_intent = bool(re.search(r'\d+\s*%|\d+\s*por\s*ciento', user_message, re.IGNORECASE))
+        if (_palabras_intent & PRECIO_CMD) or ((_palabras_intent & PRECIO_INF) and _pct_intent):
+            intent = "ajustar_precios"
+            print("[AGENT] Intent deterministico (sin modelo) -> ajustar_precios")
+        else:
+            intent = _intent_deterministico(user_message)
+            if intent:
+                print(f"[AGENT] Intent deterministico (sin modelo) -> {intent}")
+            elif _es_consulta_pura(user_message):
+                # Ni verbos de gestion, ni porcentajes, ni sustantivos de
+                # creacion/listado: es una pregunta. El clasificador no aporta
+                # nada aca (y de hecho se equivocaba: mandaba "cuales fueron las
+                # ventas de hoy?" a listar_categorias).
+                intent = "consulta_general"
+                print("[AGENT] Consulta pura (sin modelo de intent) -> consulta_general")
+            else:
+                intent_result = detect_intent(user_message)
+                intent = intent_result.get("intent") if type(intent_result) == dict else intent_result
+                print(f"[AGENT] Intent: {intent}")
+
         # --- Override deterministico del intent de precios ---
         # El clasificador (Ollama 0.5b) es poco fiable: a veces manda un ajuste
         # claro a consulta_general. Si el mensaje trae un verbo imperativo de
@@ -597,6 +938,14 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
                     tipo = price_type_result.get("tipo")
                 attribute = price_type_result.get("attribute") or price_type_result.get("value")
                 operacion = str(price_type_result.get("operacion") or "aumento").strip().lower()
+
+                # RED DE SEGURIDAD: nunca aplicamos un porcentaje que el usuario no
+                # escribio. Si el mensaje no tiene ni un digito, no hay porcentaje
+                # posible y lo que devuelva el modelo es una alucinacion. Con
+                # "me conviene subir los precios?" el 0.5b devolvia 100 y esto
+                # DUPLICABA el precio de todos los productos.
+                if not re.search(r'\d', user_message):
+                    porcentaje = None
 
             # --- Operacion derivada del verbo (mas fiable que el modelo 0.5b) ---
             if re.search(r'\b(baj\w*|disminu\w*|reduc\w*|descont\w*|rebaj\w*|sacale\w*|descuent\w*)\b', user_message, re.IGNORECASE):
@@ -962,14 +1311,20 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
             )
 
         elif intent == "crear_productos":
-            cats = db.query(Category).all()
-            existing_categories = [{"id": c.id, "name": c.name} for c in cats]
-
-            product_data = create_product_with_attributes(user_message, existing_categories)
-
-            # Overrides deterministicos: lo que el usuario escribio literal manda
-            # sobre lo que devuelve el modelo 0.5b (que a veces alucina).
+            # La extraccion DETERMINISTICA va PRIMERO: lo que el usuario escribio
+            # literal manda sobre el modelo 0.5b (que a veces alucina). Si de ahi
+            # sale el nombre, NO invocamos CreateProduct: nos ahorramos una carga
+            # de modelo + ~120 tokens de generacion (~4s en CPU). Los atributos se
+            # infieren igual en la pasada de enriquecimiento posterior a la
+            # creacion. CreateProduct queda solo como fallback.
             det = _parse_producto_deterministico(user_message)
+            if _is_valid_str(det.get("nombre")):
+                product_data = {}
+            else:
+                cats = db.query(Category).all()
+                existing_categories = [{"id": c.id, "name": c.name} for c in cats]
+                product_data = create_product_with_attributes(user_message, existing_categories)
+
             for campo in ("nombre", "precio", "barcode", "proveedor"):
                 if det.get(campo) is not None and det.get(campo) != "":
                     product_data[campo] = det[campo]
@@ -1066,43 +1421,60 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
         elif intent == "agregar_atributo":
             cats = db.query(Category).all()
             existing_categories = [{"id": c.id, "name": c.name} for c in cats]
-            attr = None
-            # El VALOR del atributo lo dice el usuario explicitamente. NO usamos
-            # ningun modelo para inferirlo: el 0.5b alucina (devolvia "Pepperoni"
-            # o "material" para cosas que no dijo el usuario). Si no se puede
-            # extraer del texto, PREGUNTAMOS en vez de especular.
-            if not attr or not _is_valid_str(attr.get("categoria")) or not _is_valid_str(attr.get("valor")):
-                idx = re.search(r'(?:atributo|attributo)\s+', user_message, re.IGNORECASE)
-                if idx:
-                    rest = user_message[idx.end():]
-                    val = re.split(r'\s+(?:y\s+|asignal\w*|asigna\w*|para\s+)', rest, maxsplit=1, flags=re.IGNORECASE)[0].strip().rstrip('.,;:¿?"""''')
-                    cat_name = None
-                    if val:
-                        m2 = re.search(r'^["""]?(.+?)["""]?\s+(?:de|en)\s+["""]?(.+?)["""]?$', val, re.IGNORECASE)
-                        if m2:
-                            posible_val = m2.group(1).strip()
-                            posible_cat = re.sub(r'^(?:la\s+|el\s+)?(?:categoria|categoría)\s+', '', m2.group(2).strip(), flags=re.IGNORECASE).strip()
-                            _cats_low = [c["name"].lower() for c in existing_categories]
-                            # Aceptar "... de/en X" como categoria SOLO si es explicito
-                            # ("... categoria X") o X ya existe como categoria.
-                            # Asi "galletas de chocolate" queda como un unico valor.
-                            if re.search(r'(?:categoria|categoría)', m2.group(2), re.IGNORECASE) or posible_cat.lower() in _cats_low:
-                                val = posible_val
-                                cat_name = posible_cat
-                        cat_name = cat_name or detect_category_and_value(val, existing_categories).get("categoria_inferida")
-                        if val:
-                            attr = {"categoria": cat_name if _is_valid_str(cat_name) else "tipo", "valor": val}
 
-            if not attr:
+            # 1) VALOR y CATEGORIA EXPLICITA: puro texto del usuario, sin modelo.
+            #    El 0.5b alucinaba el valor (devolvia "Pepperoni" o "material" para
+            #    cosas que el usuario no dijo), asi que el valor NUNCA lo infiere.
+            val = None
+            cat_explicita = None
+            idx = re.search(r'(?:atributo|attributo)\s+', user_message, re.IGNORECASE)
+            if idx:
+                rest = user_message[idx.end():]
+                val = re.split(r'\s+(?:y\s+|asignal\w*|asigna\w*|para\s+)', rest, maxsplit=1, flags=re.IGNORECASE)[0].strip().rstrip('.,;:¿?"""''')
+                if val:
+                    m2 = re.search(r'^["""]?(.+?)["""]?\s+(?:de|en)\s+["""]?(.+?)["""]?$', val, re.IGNORECASE)
+                    if m2:
+                        posible_val = m2.group(1).strip()
+                        posible_cat = re.sub(r'^(?:la\s+|el\s+)?(?:categoria|categoría)\s+', '', m2.group(2).strip(), flags=re.IGNORECASE).strip()
+                        _cats_low = [c["name"].lower() for c in existing_categories]
+                        # Aceptar "... de/en X" como categoria SOLO si es explicito
+                        # ("... categoria X") o X ya existe como categoria.
+                        # Asi "galletas de chocolate" queda como un unico valor.
+                        if re.search(r'(?:categoria|categoría)', m2.group(2), re.IGNORECASE) or posible_cat.lower() in _cats_low:
+                            val = posible_val
+                            cat_explicita = posible_cat
+
+            if not _is_valid_str(val):
                 return AgentResponse(
-                    message="No entendi que atributo y categoria queres agregar. Decime por ejemplo: 'agregar atributo ropa de categoria indumentaria'",
+                    message="No entendi que atributo queres agregar. Decime por ejemplo: 'agregar atributo ropa de categoria indumentaria'",
                     action_executed="agregar_atributo",
                     success=False
                 )
-            cat_name = attr.get("categoria")
-            val = attr.get("valor")
 
-            categoria_existe = bool(db.query(Category).filter(Category.name == cat_name).first())
+            # 2) Que productos lo llevan: primero la BD (coincidencia literal,
+            #    exacta e instantanea). La APP decide sola: al usuario no se le
+            #    pregunta a que producto asignar un atributo.
+            productos_todos = db.query(Product).all()
+            matched = _match_productos_por_valor(productos_todos, val)
+
+            # 3) La CATEGORIA es lo unico que requiere inferencia genuina, y es el
+            #    unico modelo que invoca este flujo (cero modelos si el usuario ya
+            #    dijo la categoria).
+            #
+            #    Que productos llevan el atributo lo decide la BD, NO un modelo.
+            #    Se probo AttributeResolver para el caso semantico y es peor que
+            #    inutil: con productos [Leche entera, Yogur, Martillo] y el atributo
+            #    "lacteos" devolvio [Leche entera, Martillo]; con "golosinas"
+            #    devolvio los tres productos. Asignaria atributos equivocados en
+            #    silencio, que es justo lo que no queremos que pase sin que nadie
+            #    lo revise.
+            cat_name = cat_explicita
+            if not cat_name:
+                cat_name = detect_category_and_value(val, existing_categories).get("categoria_inferida")
+
+            if not _is_valid_str(cat_name):
+                cat_name = "tipo"
+
             ac = db.query(Category).filter(Category.name == cat_name).first()
             if not ac:
                 ac = Category(name=cat_name)
@@ -1118,25 +1490,22 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
                 db.add(av)
                 db.commit()
 
-            # --- Auto-asignar a productos que coincidan ---
-            productos = db.query(Product).all()
-            productos_list = [{"id": p.id, "name": p.name, "description": p.description or ""} for p in productos]
-            resolved = resolve_attribute_in_db(cat_name, val, categoria_existe, productos_list)
-            productos_ids = resolved.get("productos_detectados", [])
+            # --- Auto-asignar (los productos ya los resolvio la app en el paso 2) ---
             asignados = 0
-            for pid in productos_ids:
-                existe = db.query(ProductAttribute).filter_by(product_id=pid, attribute_id=av.id).first()
+            for p in matched:
+                existe = db.query(ProductAttribute).filter_by(product_id=p.id, attribute_id=av.id).first()
                 if not existe:
-                    db.add(ProductAttribute(product_id=pid, attribute_id=av.id))
+                    db.add(ProductAttribute(product_id=p.id, attribute_id=av.id))
                     asignados += 1
             if asignados:
                 db.commit()
 
             msg = f"Atributo '{val}' agregado a categoria '{cat_name}'."
             if asignados:
-                msg += f" Se asigno automaticamente a {asignados} producto(s)."
+                nombres = ", ".join(p.name for p in matched)
+                msg += f" Se asigno automaticamente a {asignados} producto(s): {nombres}."
             else:
-                msg += " No se encontraron productos para asignar automaticamente."
+                msg += " Todavia no hay productos que lo lleven; se lo voy a asignar a los que correspondan cuando los crees."
 
             return AgentResponse(
                 message=msg,
@@ -1163,25 +1532,11 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
             # IncompleteHandler en vez de una respuesta generica del asesor.
             # Los faltantes de flujos concretos (porcentaje, nombre, precio,
             # barcode) NO llegan aca: se resuelven inline mas arriba.
-            VERBOS_ACCION = (
-                'aumentar', 'aumentame', 'aumenta', 'aumentá', 'subir', 'subime', 'subi', 'subí', 'sube',
-                'incrementar', 'incrementame', 'incrementa',
-                'bajar', 'bajame', 'baja', 'bajá', 'disminuir', 'disminuime', 'disminui', 'disminuí',
-                'reducir', 'reducime', 'reduci', 'reducí', 'reduce', 'descontar', 'descontame',
-                'rebajar', 'rebajame', 'rebaja',
-                'crear', 'crea', 'creá', 'creame', 'crealo', 'crearme',
-                'agregar', 'agrega', 'agregá', 'agregame', 'agregale', 'agregalo', 'añadir', 'añade', 'sumar',
-                'poner', 'pone', 'poné', 'poneme', 'ponele',
-                'cambiar', 'cambia', 'cambiá', 'modificar', 'modifica', 'modificá',
-                'asignar', 'asigna', 'asigná', 'asignale',
-                'borrar', 'borra', 'borrá', 'borrame', 'eliminar', 'elimina', 'eliminá',
-                'sacar', 'saca', 'sacá', 'sacale'
-            )
-            palabras = re.findall(r'\w+', user_message.lower())
+            palabras = set(re.findall(r'\w+', user_message.lower()))
             tiene_porcentaje = bool(re.search(r'\d+\s*%|\d+\s*por\s*ciento', user_message, re.IGNORECASE))
             # Si el mensaje trae un porcentaje explicito no es "incompleto":
             # es una accion concreta que el clasificador no supo rutear.
-            es_accion_incompleta = any(v in palabras for v in VERBOS_ACCION) and not tiene_porcentaje
+            es_accion_incompleta = bool(palabras & ACCION_VERBOS) and not tiene_porcentaje
 
             if es_accion_incompleta:
                 ctx = context or {"intent_detectado": intent, "mensaje_original": user_message}
@@ -1193,26 +1548,19 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
                     data={"missing_field": result.get("campo_faltante"), "context": ctx}
                 )
 
-            total_products = db.query(Product).count()
-            bridge_count = db.query(ProductAttribute).count()
-            avg_price = db.query(Product).with_entities(sqlfunc.avg(Product.price)).scalar()
-            min_price = db.query(Product).with_entities(sqlfunc.min(Product.price)).scalar()
-            max_price = db.query(Product).with_entities(sqlfunc.max(Product.price)).scalar()
+            db_stats = _construir_stats(db, user_message)
 
-            cats = db.query(Category).all()
-            cat_stats = {}
-            for c in cats:
-                attr_count = db.query(Attribute).filter(Attribute.category_id == c.id).count()
-                cat_stats[c.name] = attr_count
-
-            db_stats = {
-                "total_productos": total_products,
-                "productos_sin_atributos": total_products - bridge_count if total_products > 0 else 0,
-                "precio_promedio": round(avg_price, 2) if avg_price else 0,
-                "precio_minimo": min_price if min_price else 0,
-                "precio_maximo": max_price if max_price else 0,
-                "categorias_y_valores": cat_stats
-            }
+            # Si la pregunta es factual, la contesta la BD (exacta e instantanea).
+            # El asesor queda para lo que si necesita redaccion/criterio.
+            directa = _responder_consulta_directa(db, user_message, db_stats)
+            if directa:
+                print("[AGENT] Consulta factual respondida por la BD (sin modelo)")
+                return AgentResponse(
+                    message=directa,
+                    action_executed="consulta_general",
+                    success=True,
+                    data={"stats": db_stats}
+                )
 
             response = handle_general_query(user_message, db_stats)
             return AgentResponse(

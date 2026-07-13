@@ -151,4 +151,5 @@ RESPUESTA:
 PARAMETER temperature 0
 PARAMETER top_k 5
 PARAMETER top_p 0.2
-PARAMETER num_predict 80
+PARAMETER num_predict 40
+PARAMETER num_ctx 1536

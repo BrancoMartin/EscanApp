@@ -44,6 +44,7 @@ Respuesta: {"barcode": "123456", "nombre": "zapatillas", "descripcion": "talle 4
 """
 
 PARAMETER temperature 0
-PARAMETER num_predict 250
+PARAMETER num_predict 120
+PARAMETER num_ctx 1536
 PARAMETER top_k 10
 PARAMETER top_p 0.5
