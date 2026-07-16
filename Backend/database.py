@@ -1,21 +1,23 @@
-import sys
-
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
-import os
+
+from Backend import runtime
 
 
 class Base(DeclarativeBase):
     pass
 
 
-def get_db_path():
-    if getattr(sys, 'frozen', False):
-        return os.path.dirname(sys.executable)
-    return os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
+# Prepara la carpeta de datos del usuario ANTES de tocar la base: si es su
+# primer arranque, siembra pos.db y los Modelfiles. Es idempotente.
+runtime.ensure_user_data()
 
-BASE_DIR = get_db_path()
-DATABASE_URL = f"sqlite:///{os.path.join(BASE_DIR, 'pos.db')}"
+# La base vive en la carpeta de datos del usuario, NO junto al ejecutable.
+# Instalada en C:\Program Files, Windows no deja escribir ahi sin elevacion y
+# SQLite abriria la base en modo lectura: la primera venta fallaria con
+# "attempt to write a readonly database".
+BASE_DIR = runtime.data_dir()
+DATABASE_URL = f"sqlite:///{runtime.db_path()}"
 
 engine = create_engine(
     DATABASE_URL,

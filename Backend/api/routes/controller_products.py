@@ -23,6 +23,30 @@ class ProductInput(BaseModel):
     description: Optional[str] = None
     proveedor: Optional[str] = None
 
+
+def normalizar(texto):
+    """Normaliza un campo de texto: sin espacios sobrantes y en minusculas.
+
+    Devuelve None cuando el campo esta ausente o vacio: description y proveedor
+    son opcionales (la tabla products los acepta NULL), asi que llamarles
+    .lower() directamente reventaba con 'NoneType' object has no attribute
+    'lower' apenas el usuario creaba un producto sin descripcion.
+    """
+    if texto is None:
+        return None
+    limpio = texto.strip().lower()
+    if limpio == "":
+        return None
+    return limpio
+
+
+def texto_para_ia(valor):
+    """Los modelos de IA esperan texto, no null: un campo ausente va como ''."""
+    if valor is None:
+        return ""
+    return valor
+
+
 # List all products
 @router.get("/")
 def get_all(service: ProductService = Depends(get_product_service)):
@@ -56,16 +80,23 @@ def create(data: ProductInput, service: ProductService = Depends(get_product_ser
            service_attribute: AttributeService = Depends(get_attribute_service),  service_product_attribute: ProductAttributeService = Depends(get_product_attribute_service)):
     try:
         print("Intentando crear producto con datos:", data)
-        productCreate = service.create(data.barcode, data.name.lower(), data.price, data.description.lower(), data.proveedor.lower())
+
+        # Se normaliza una sola vez, aca en el borde de la API. description y
+        # proveedor son opcionales: quedan en None si no vinieron.
+        nombre = normalizar(data.name)
+        descripcion = normalizar(data.description)
+        proveedor = normalizar(data.proveedor)
+
+        productCreate = service.create(data.barcode, nombre, data.price, descripcion, proveedor)
 
         categories = service_category.get_all()
 
         category_names = [cat.name.lower() if cat.name else cat.name for cat in categories]
 
         created_categories = create_categories(
-            nombre=data.name.lower(),
-            descripcion=data.description.lower(),
-            proveedor = data.proveedor.lower(),
+            nombre=nombre,
+            descripcion=texto_para_ia(descripcion),
+            proveedor=texto_para_ia(proveedor),
             categorias_existentes=category_names
         )
 
@@ -81,9 +112,9 @@ def create(data: ProductInput, service: ProductService = Depends(get_product_ser
 
         # 2. Extraer atributos con IA
         result = attribute_extractor(
-            nombre=data.name.lower(),
-            descripcion=data.description.lower(),
-            proveedor=data.proveedor.lower(),
+            nombre=nombre,
+            descripcion=texto_para_ia(descripcion),
+            proveedor=texto_para_ia(proveedor),
             categoria=category_names
         )
 
@@ -104,7 +135,7 @@ def create(data: ProductInput, service: ProductService = Depends(get_product_ser
             print("attr['valor']: ", attr["valor"])
 
             attribute_obj = service_attribute.get_or_create_attribute(category.id, attr["valor"].lower())
-            product = service.get_by_name(data.name.lower())
+            product = service.get_by_name(nombre)
             product_attribute = service_product_attribute.get_or_create(product.id, attribute_obj.id)
             if not product_attribute:
                 print(f"ERROR: No se pudo asignar atributo '{attr['valor']}' al producto '{product.name}'")
@@ -121,7 +152,17 @@ def create(data: ProductInput, service: ProductService = Depends(get_product_ser
 @router.put("/{product_id}")
 def update(product_id: int, data: ProductInput, service: ProductService = Depends(get_product_service)):
     try:
-        product = service.update(product_id, data.barcode.lower(), data.name.lower(), data.price.lower(), data.description.lower())
+        # El precio es un float: el .lower() que habia aca hacia fallar SIEMPRE
+        # este endpoint ('float' object has no attribute 'lower'), con cualquier
+        # payload. Y el proveedor se aceptaba en el body pero no se guardaba.
+        product = service.update(
+            product_id,
+            normalizar(data.barcode),
+            normalizar(data.name),
+            data.price,
+            normalizar(data.description),
+            normalizar(data.proveedor),
+        )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     if not product:

@@ -12,11 +12,23 @@ dist.zip
 
 .venv/
 venv38/
-dist/
-build/
 *.db
-*.zip
 *.exe
+
+# Artefactos de release (se regeneran con scripts\build_release.bat)
+release/
+
+# Instalador de Ollama vendorizado para el build offline: pesa ~1 GB, no va a git.
+installer/vendor/
+
+# Excepcion: la base de datos inicial (esquema vacio, sin datos) que el
+# instalador siembra en la carpeta de cada usuario. Sin ella no se puede
+# construir el release, asi que SI se versiona.
+!installer/seed/pos.db
 
 # Graphify generated files
 graphify-out/
+
+# Logs sueltos
+backend2.log
+backend2_err.log

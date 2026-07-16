@@ -1,4 +1,4 @@
-﻿FROM qwen2.5:0.5b
+FROM qwen2.5:0.5b
 
 SYSTEM """
 Sos el asesor de una app de gestion de productos para comercios chicos.

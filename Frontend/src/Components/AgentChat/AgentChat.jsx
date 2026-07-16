@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import "./AgentChat.css";
-import { Bot, User, Trash } from "lucide-react";
+import { User, Bot } from "lucide-react";
 
 const BASE_URL = import.meta.env.PROD ? "" : "http://localhost:8000";
 
@@ -241,7 +241,7 @@ function AgentChat({ onClose }) {
             onClick={handleClearChat}
             title="Limpiar chat"
           >
-            <Trash></Trash>
+            🗑️
           </button>
           <button className="close-btn" onClick={onClose} title="Cerrar chat">
             ✕

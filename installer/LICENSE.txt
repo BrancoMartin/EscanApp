@@ -1,0 +1,64 @@
+ACUERDO DE LICENCIA DE USUARIO FINAL - EscanApp
+
+Copyright (c) 2026. Todos los derechos reservados.
+
+Al instalar y utilizar EscanApp ("el Software"), usted acepta los terminos de
+este acuerdo. Si no esta de acuerdo, no instale ni utilice el Software.
+
+1. LICENCIA DE USO
+
+Se le concede una licencia no exclusiva e intransferible para instalar y
+utilizar el Software en los equipos de su negocio, con el fin de gestionar su
+inventario, sus productos y sus ventas.
+
+2. RESTRICCIONES
+
+Usted no puede:
+  a) Revender, sublicenciar, alquilar o redistribuir el Software.
+  b) Realizar ingenieria inversa, descompilar o desensamblar el Software, salvo
+     en la medida en que la ley aplicable lo permita expresamente.
+  c) Eliminar o alterar los avisos de propiedad intelectual del Software.
+
+3. COMPONENTES DE TERCEROS
+
+El Software instala y utiliza Ollama (https://ollama.com) para ejecutar los
+modelos de inteligencia artificial localmente, en su propia computadora. Ollama
+se distribuye bajo su propia licencia (MIT). Los modelos de lenguaje utilizados
+se descargan desde los repositorios publicos de Ollama y estan sujetos a las
+licencias de sus respectivos autores.
+
+El Software tambien incluye componentes de codigo abierto (entre otros: Python,
+FastAPI, SQLAlchemy, React), cada uno sujeto a su propia licencia.
+
+4. DATOS Y PRIVACIDAD
+
+El Software funciona de forma local. Los modelos de inteligencia artificial se
+ejecutan en su computadora: la informacion de sus productos, sus ventas y sus
+conversaciones con el asistente NO se envian a ningun servidor externo.
+
+Durante la instalacion, y unicamente entonces, el Software descarga desde
+internet el motor Ollama (si no estuviera ya instalado) y el modelo de lenguaje
+base necesario para funcionar.
+
+Sus datos se almacenan en su equipo, en:
+    %LOCALAPPDATA%\EscanApp
+
+5. AUSENCIA DE GARANTIA
+
+EL SOFTWARE SE PROPORCIONA "TAL CUAL", SIN GARANTIA DE NINGUN TIPO, EXPRESA O
+IMPLICITA, INCLUYENDO PERO NO LIMITANDOSE A LAS GARANTIAS DE COMERCIABILIDAD E
+IDONEIDAD PARA UN PROPOSITO PARTICULAR.
+
+6. LIMITACION DE RESPONSABILIDAD
+
+EN NINGUN CASO EL AUTOR SERA RESPONSABLE POR DANOS DIRECTOS, INDIRECTOS,
+INCIDENTALES O CONSECUENTES DERIVADOS DEL USO O LA IMPOSIBILIDAD DE USO DEL
+SOFTWARE, INCLUYENDO LA PERDIDA DE DATOS.
+
+Se recomienda al usuario realizar copias de seguridad periodicas de su base de
+datos.
+
+7. RESPALDO DE SUS DATOS
+
+La desinstalacion del Software le preguntara si desea conservar sus datos. Si
+elige eliminarlos, la accion es irreversible.

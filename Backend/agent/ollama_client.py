@@ -2,9 +2,14 @@ import os
 from dotenv import load_dotenv
 from langchain_ollama import OllamaLLM
 
+from Backend.agent.provisioning import BASE_MODEL
+
 load_dotenv()
 
-OLLAMA_BASE_URL = "http://localhost:11434"
+OLLAMA_BASE_URL = os.getenv(
+    "OLLAMA_BASE_URL",
+    "http://127.0.0.1:11434"
+)
 
 # Mantiene cada modelo cargado en memoria por este tiempo tras usarlo, para no
 # pagar la recarga (~2.2s por modelo en CPU) en el proximo request.
@@ -31,8 +36,12 @@ CreateCategories = "create-categories-by-products"
 
 
 def get_llm():
+    # El default sale de provisioning.BASE_MODEL, que es el mismo modelo que
+    # declara el FROM de los 9 Modelfiles y el unico que el instalador descarga.
+    # Apuntar OLLAMA_MODEL a otro modelo significa bajarse un modelo entero que
+    # la app no usa (era el caso: el .env pedia gemma3:4b, 3.3 GB al pedo).
     return OllamaLLM(
-        model=os.getenv("OLLAMA_MODEL", "qwen2.5:0.5b"),
+        model=os.getenv("OLLAMA_MODEL", BASE_MODEL),
         base_url=OLLAMA_BASE_URL,
         keep_alive=KEEP_ALIVE
     )

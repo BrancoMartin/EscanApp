@@ -46,7 +46,15 @@ class ProductService:
         if get_product: 
             raise ValueError("Ya existe un producto con ese nombre y descripcion")
 
-        product = Product(name=name.lower(), description=description.lower(), price=price, barcode=barcode, proveedor=proveedor)
+        # description y proveedor son opcionales (columnas nullable): pueden venir
+        # en None, y llamarles .lower() reventaba la creacion del producto.
+        product = Product(
+            name=self._minusculas(name),
+            description=self._minusculas(description),
+            price=price,
+            barcode=barcode,
+            proveedor=self._minusculas(proveedor),
+        )
         response = self.repo.create(product)
 
         return {
@@ -56,14 +64,21 @@ class ProductService:
         "name": response.name,
         "price": response.price,
         "barcode": response.barcode,
-        "description": response.description
+        "description": response.description,
+        "proveedor": response.proveedor
     }}
 
 
+    def _minusculas(self, valor):
+        """Minusculas tolerante a None. El agente de IA tambien llama a este
+        service, asi que la defensa va aca y no solo en el controlador."""
+        if valor is None:
+            return None
+        return valor.lower()
 
 
-    def update(self, product_id: int, barcode: str = None, name: str = None, 
-               price: float = None, description: str = None) -> Product:
+    def update(self, product_id: int, barcode: str = None, name: str = None,
+               price: float = None, description: str = None, proveedor: str = None) -> Product:
         product = self.get_by_id(product_id)
         if barcode is not None:
             existing = self.repo.get_by_barcode(barcode)
@@ -74,6 +89,8 @@ class ProductService:
             product.name = name.lower()
         if description is not None:
             product.description = description.lower()
+        if proveedor is not None:
+            product.proveedor = proveedor.lower()
         if price is not None:
             product.price = price
         return self.repo.update(product)

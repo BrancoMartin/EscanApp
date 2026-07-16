@@ -1,0 +1,8 @@
+# Dependencias necesarias SOLO para construir el release.
+# El usuario final no las necesita: quedan dentro del EscanApp.exe.
+#
+#   pip install -r requirements-build.txt
+
+-r requirements.txt
+
+pyinstaller==6.21.0

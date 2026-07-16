@@ -23,7 +23,7 @@ function Nav() {
     <nav className="main-nav">
       <div className="nav-brand">
         <span className="nav-brand-icon">
-          <img src="/icono1.ico" alt="Logo" />
+          <img src="/static/icono1.png" alt="Logo" />
         </span>
         <span className="nav-brand-name">EscanApp</span>
       </div>
