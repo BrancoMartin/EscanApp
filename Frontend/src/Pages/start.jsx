@@ -52,7 +52,8 @@ function Start() {
 
         {!showAgent && (
           <div className="agent-tooltip">
-            AJUSTA LOS PRECIOS DE TUS PRODUCTOS. Hablando con este agente ia
+            <b>AJUSTA LOS PRECIOS DE TUS PRODUCTOS.</b>{" "}
+            <p>Hablando con este agente ia.</p>
           </div>
         )}
       </div>
