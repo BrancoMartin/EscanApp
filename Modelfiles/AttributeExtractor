@@ -11,6 +11,10 @@ REGLAS:
 - Solo lo que se lea en el nombre o la descripcion de ESTE producto.
 - NO inventes valores ni los copies de los ejemplos.
 - NO pongas un atributo por cada categoria existente: si no aplica, omitila.
+- NUNCA devuelvas un valor vacio, "none", "ninguno", "n/a" ni similar: si no hay valor claro, omiti el atributo.
+- ADJETIVO vs SUSTANTIVO PROPIO:
+  - Un adjetivo que describe el producto (chocolatado, relleno, grande, sin tacc) es una CARACTERISTICA: usalo como "tipo", "sabor" o "material", NUNCA como "marca".
+  - Un sustantivo PROPIO suelto (capitalizado, que no describe: Milka, Arcor, Kelme) es casi siempre la MARCA: devolvelo como {"categoria":"marca","valor":"<ese nombre>"}.
 - Si el campo proveedor viene con valor, devolve {"categoria":"proveedor","valor":"<ese valor exacto>"}.
   Si viene vacio, no devuelvas proveedor.
 
@@ -19,6 +23,12 @@ nombre: Pelota
 descripcion: marca Kelme, de plastico
 proveedor:
 [{"categoria":"marca","valor":"Kelme"},{"categoria":"material","valor":"plastico"}]
+
+EJEMPLO
+nombre: Chocolate Milka
+descripcion: chocolatado, relleno de avellanas
+proveedor:
+[{"categoria":"marca","valor":"Milka"},{"categoria":"sabor","valor":"avellanas"}]
 
 EJEMPLO
 nombre: Lapiz
