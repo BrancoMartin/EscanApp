@@ -63,6 +63,46 @@
   font-weight: 600;
 }
 
+/* Indicador de origen del código: lector vs tecleo manual. Discreto a
+   proposito: informa, no compite con el campo. */
+.barcode-source {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.barcode-source--scanner {
+  color: var(--primary);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .barcode-source {
+    animation: barcode-source-in 0.18s ease-out;
+  }
+}
+
+@keyframes barcode-source-in {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  filter: none;
+}
+
 .button {
   width: fit-content;
   margin: 1.25rem 0 0 auto;
@@ -101,4 +141,38 @@
     width: 100%;
     margin-inline: 0;
   }
+}
+
+/* --- Importación masiva desde Excel/CSV -------------------------------- */
+.import-box {
+  margin-top: 1.5rem;
+  padding: 1.5rem;
+  border: 1px dashed rgba(123, 70, 255, 0.4);
+  border-radius: 16px;
+  background: rgba(123, 70, 255, 0.04);
+}
+
+.import-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  margin-top: 0.5rem;
+}
+
+.import-result {
+  margin-top: 1rem;
+}
+
+.import-errors {
+  margin-top: 0.5rem;
+  padding-left: 1.1rem;
+  max-height: 220px;
+  overflow-y: auto;
+  color: #b4232a;
+  font-size: 0.9rem;
+}
+
+.import-errors li {
+  margin-bottom: 0.25rem;
 }

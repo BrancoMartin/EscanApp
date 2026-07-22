@@ -45,9 +45,9 @@ function AgentChat({ onClose }) {
 
         if (prods.length > 0) {
           const randomProd = prods[Math.floor(Math.random() * prods.length)];
-          examples.push(`"Aumentame ${randomProd.name} un 30%"`);
+          examples.push(`"Aumentame ${randomProd.name} un 5%"`);
         } else {
-          examples.push(`"Aumentame un producto un 20%"`);
+          examples.push(`"Aumentame un producto un 10%"`);
         }
 
         if (cats.length > 0) {
@@ -59,12 +59,12 @@ function AgentChat({ onClose }) {
           if (attrs.length > 0) {
             const randomAttr = attrs[Math.floor(Math.random() * attrs.length)];
             examples.push(
-              `"Aumentame los productos de ${randomAttr.name} un 20%"`,
+              `"Aumentame los productos de ${randomAttr.name} un 7%"`,
             );
           }
         }
 
-        examples.push(`"Aumentame todos los productos un 15%"`);
+        examples.push(`"Aumentame todos los productos un 13%"`);
 
         const welcomeText = `¡Hola! Soy tu asistente de precios. Podes pedirme cosas como:\n\n${examples.map((e, i) => `${i + 1}. ${e}`).join("\n")}\n\nTambien podes escanear un codigo de barras y te muestro el producto.\n\n O crear un producto desde acá.`;
 
@@ -75,7 +75,7 @@ function AgentChat({ onClose }) {
           {
             id: 1,
             type: "assistant",
-            text: `¡Hola! Soy tu asistente de precios. Podes pedirme cosas como:\n\n1. "Aumentame todos los productos un 15%"\n2. "Aumentame la leche un 30%"\n3. "Cuantos productos tengo?"`,
+            text: `¡Hola! Soy tu asistente de precios. Podes pedirme cosas como:\n\n1. "Aumentame todos los productos un 13%"\n2. "Aumentame los alfajores un 7%"\n3. "Cuantos productos tengo?"`,
           },
         ]);
       }

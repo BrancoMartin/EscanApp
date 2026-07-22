@@ -14,3 +14,10 @@ pywebview==6.2.1
 # maquina moria con "ModuleNotFoundError: No module named 'langchain_ollama'".
 langchain==1.3.2
 langchain-ollama==1.1.0
+
+# Importacion masiva de productos desde Excel (.xlsx). El CSV se lee con la
+# biblioteca estandar; openpyxl es lo unico que hace falta sumar para .xlsx.
+openpyxl==3.1.5
+
+# Necesario para recibir el archivo (multipart/form-data) en POST /products/import.
+python-multipart==0.0.20
