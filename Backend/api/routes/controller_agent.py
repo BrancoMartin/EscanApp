@@ -23,27 +23,39 @@ from Backend.agent.model6_general import handle_general_query
 from Backend.agent.model_attribute_extractor import attribute_extractor
 from Backend.agent.model_create_categories import create_categories
 from Backend.services.attribute_service import AttributeService
+# El enriquecimiento de producto (categorias + atributos) y los helpers de
+# comparacion de texto viven en la capa de servicios: los comparte con el alta
+# por formulario (`controller_products`). Se importan con alias para conservar
+# los nombres privados que este modulo ya usa en todos lados.
+from Backend.services.product_enrichment_service import (
+    MAX_CATEGORIAS_PROMPT,
+    NULL_SYNONYMS as _NULL_SYNONYMS,
+    asignar_atributos_existentes as _asignar_atributos_existentes,
+    enriquecer_producto as _enriquecer_producto_con_atributos,
+    is_valid_str as _is_valid_str,
+    match_productos_por_valor as _match_productos_por_valor,
+    normalizar as _normalizar,
+    raiz as _raiz,
+)
 
 load_dotenv()
 
 router = APIRouter()
 
 
-_NULL_SYNONYMS = frozenset({
-    'null', 'none', 'nada', 'vacio', 'vacío', 'ninguno', 'ninguna',
-    'nil', 'empty', 'blank', 'unknown', 'desconocido', 'na', 'n/a', '-'
-})
-
-def _is_valid_str(v):
-    return type(v) == str and v.strip().lower() not in _NULL_SYNONYMS
-
-
-# Tope de categorias que se le muestran a AttributeExtractor. Cada categoria de
-# mas es prompt eval (tiempo directo en CPU) y le da al 0.5b una excusa para
-# inventar un atributo mas.
-MAX_CATEGORIAS_PROMPT = 12
-
 _UNIDADES = r'(?:unidad|unidades|litro|litros|kilo|kilos|kg|gramo|gramos|gr|ml|cc|cm|metro|metros|docena|pack)'
+
+
+def _barcode_en_mensaje(msg: str):
+    """Primera secuencia de 6+ digitos del mensaje, o None.
+
+    Un codigo de barras es el dato mas deterministico del sistema: una clave de
+    negocio que el usuario escribe literal y que se resuelve con un SELECT.
+    Nunca lo interpreta un modelo."""
+    m = re.search(r'\b(\d{6,})\b', msg or "")
+    if not m:
+        return None
+    return m.group(1)
 
 def _parse_producto_deterministico(msg: str) -> dict:
     """Extrae de forma deterministica nombre/precio/barcode/proveedor del mensaje.
@@ -167,95 +179,6 @@ def clear_pending_product(session_id: str):
     _pending_products.pop(session_id, None)
 
 
-def _asignar_atributos_existentes(db: Session, product: Product) -> int:
-    """Vincula el producto nuevo a los atributos que YA existen y aparecen en su
-    nombre o descripcion. Deterministico, sin modelo. Es la otra mitad de
-    `agregar_atributo`: si el usuario creo el atributo 'galletas' cuando todavia
-    no tenia productos, el producto que cree despues lo toma solo."""
-    asignados = 0
-    for a in db.query(Attribute).all():
-        if not _match_productos_por_valor([product], a.name):
-            continue
-        existe = db.query(ProductAttribute).filter_by(product_id=product.id, attribute_id=a.id).first()
-        if not existe:
-            db.add(ProductAttribute(product_id=product.id, attribute_id=a.id))
-            asignados += 1
-    if asignados:
-        db.commit()
-    return asignados
-
-
-def _enriquecer_producto_con_atributos(db: Session, product: Product, user_message: str = ""):
-    proveedor = product.proveedor or ""
-
-    # Primero lo que la BD ya sabe (sin modelo): atributos existentes que el
-    # producto menciona en su nombre o descripcion.
-    _asignar_atributos_existentes(db, product)
-
-    # Si el proveedor viene informado, la categoria "proveedor" debe existir ANTES
-    # de extraer atributos, para que AttributeExtractor devuelva el atributo de
-    # proveedor (SDD ai-agent). Que la categoria se llama "proveedor" ya lo
-    # sabemos: no hace falta preguntarselo a un modelo. Lo hacemos deterministico
-    # y nos ahorramos una llamada a CreateCategories (~1.5s) en cada creacion.
-    if _is_valid_str(proveedor):
-        existe_cat = db.query(Category).filter(Category.name == "proveedor").first()
-        if not existe_cat:
-            db.add(Category(name="proveedor"))
-            db.commit()
-
-    # Acotamos las categorias que ve el modelo: cuantas mas le pasamos, mas
-    # atributos inventa (emitia uno por categoria), agotando num_predict. La
-    # categoria "proveedor" tiene que estar si el proveedor vino informado.
-    cats = db.query(Category).all()
-    cats_list = [c.name for c in cats][:MAX_CATEGORIAS_PROMPT]
-    if _is_valid_str(proveedor) and "proveedor" not in cats_list:
-        cats_list.append("proveedor")
-
-    # OJO: AttributeExtractor espera la lista de categorias (no un string),
-    # para poder agregar el proveedor de forma deterministica.
-    atributos_extra = attribute_extractor(product.name, product.description or "", cats_list, proveedor)
-
-    # Fallback: si el extractor no infirio ningun atributo, pedimos a
-    # CreateCategories que bootstrapee categorias para los proximos productos.
-    if not atributos_extra:
-        nuevas = create_categories(product.name, product.description or "", proveedor, cats_list)
-        for nombre_cat in nuevas.get("categorias_nuevas", []):
-            if _is_valid_str(nombre_cat):
-                existe_cat = db.query(Category).filter(Category.name == nombre_cat).first()
-                if not existe_cat:
-                    db.add(Category(name=nombre_cat))
-        db.commit()
-        return 0
-    contados = 0
-    for attr in atributos_extra:
-        cat_name = attr.get("categoria")
-        val = attr.get("valor")
-        if not _is_valid_str(cat_name) or not _is_valid_str(val):
-            continue
-        ac = db.query(Category).filter(Category.name == cat_name).first()
-        if not ac:
-            ac = Category(name=cat_name)
-            db.add(ac)
-            db.commit()
-            db.refresh(ac)
-        av = db.query(Attribute).filter(
-            Attribute.category_id == ac.id,
-            Attribute.name == val
-        ).first()
-        if not av:
-            av = Attribute(category_id=ac.id, name=val)
-            db.add(av)
-            db.commit()
-            db.refresh(av)
-        existe = db.query(ProductAttribute).filter_by(product_id=product.id, attribute_id=av.id).first()
-        if not existe:
-            db.add(ProductAttribute(product_id=product.id, attribute_id=av.id))
-            contados += 1
-    if contados:
-        db.commit()
-    return contados
-
-
 # Verbos que identifican SIN AMBIGUEDAD un ajuste de precios. Se usan para el
 # fast-path deterministico: si el mensaje trae uno de estos, resolvemos el
 # intent sin llamar al clasificador Ollama (que es la parte mas lenta por la
@@ -287,45 +210,6 @@ _CREAR_VERBO = r'\b(?:creame|crearme|crear|crea|creá|crealo|nueva|nuevo|agregam
 # eval (tiempo directo en CPU). Las preguntas factuales ya las responde la BD sin
 # modelo, asi que al asesor le alcanza con una muestra para dar contexto.
 MAX_PRODUCTOS_STATS = 6
-
-
-def _normalizar(texto: str) -> str:
-    """Minusculas y sin acentos, para comparar texto del usuario contra la BD."""
-    t = (texto or "").strip().lower()
-    for con_acento, sin_acento in (("á", "a"), ("é", "e"), ("í", "i"), ("ó", "o"), ("ú", "u"), ("ü", "u")):
-        t = t.replace(con_acento, sin_acento)
-    return t
-
-
-def _raiz(palabra: str) -> str:
-    """Raiz aproximada: saca el plural para que 'galletas' matchee 'galleta'."""
-    p = _normalizar(palabra)
-    if len(p) > 4 and p.endswith("es"):
-        return p[:-2]
-    if len(p) > 3 and p.endswith("s"):
-        return p[:-1]
-    return p
-
-
-def _match_productos_por_valor(productos: list, valor: str) -> list:
-    """Productos cuyo nombre o descripcion mencionan el valor del atributo.
-
-    Va mas alla del ILIKE crudo: compara sin acentos y por raiz, asi 'galletas'
-    encuentra 'Galleta rellena' y 'plastico' encuentra 'plástico'. Cuanto mejor
-    resuelve esto la BD, menos veces hay que gastar el modelo."""
-    raices_valor = [_raiz(t) for t in re.findall(r'\w+', valor) if len(t) > 2]
-    if not raices_valor:
-        return []
-
-    encontrados = []
-    for p in productos:
-        texto = _normalizar(f"{p.name} {p.description or ''}")
-        raices_texto = [_raiz(t) for t in re.findall(r'\w+', texto)]
-        # Todas las raices del valor tienen que aparecer en el producto: asi
-        # "galletas de chocolate" no matchea cualquier producto con "chocolate".
-        if all(any(rv == rt or rv in rt for rt in raices_texto) for rv in raices_valor):
-            encontrados.append(p)
-    return encontrados
 
 
 def _ventas_desde(db: Session, desde):
@@ -700,6 +584,24 @@ def _avanzar_creacion_producto(db: Session, product_data: dict) -> AgentResponse
     return _crear_producto_desde_data(db, product_data)
 
 
+def _responder_producto_encontrado(db: Session, prod: Product) -> "AgentResponse":
+    """Respuesta de un producto resuelto por codigo de barras, con sus atributos."""
+    attrs = db.query(Attribute).join(ProductAttribute).filter(
+        ProductAttribute.product_id == prod.id
+    ).all()
+    attr_lines = []
+    for a in attrs:
+        cat_name = db.query(Category.name).filter(Category.id == a.category_id).scalar()
+        attr_lines.append(f"  - {cat_name}: {a.name}")
+    attr_str = "\n" + "\n".join(attr_lines) if attr_lines else ""
+    return AgentResponse(
+        message=f"**Producto encontrado:**\nNombre: {prod.name}\nPrecio: ${prod.price}\nCodigo: {prod.barcode}{attr_str}",
+        action_executed="escanear_barcode",
+        success=True,
+        data={"id": prod.id, "name": prod.name, "price": prod.price, "barcode": prod.barcode}
+    )
+
+
 @router.post("/chat", response_model=AgentResponse)
 def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
     try:
@@ -764,31 +666,39 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
             save_pending_product("default", pd)
             return _avanzar_creacion_producto(db, pd)
 
-        # --- Detectar escaneo de codigo de barras ---
+        # --- Consulta / escaneo de codigo de barras (deterministico) ---
+        # Antes solo se reconocia el mensaje pelado (^\d{6,}$). Alcanzaba una
+        # palabra alrededor ("que producto es el 779...") para que la deteccion
+        # no disparara: el mensaje caia en consulta_general y el asesor 0.5b
+        # -que recibe las estadisticas del negocio en el prompt- contestaba el
+        # PRECIO PROMEDIO de todos los productos. Plausible y falso.
         bc_raw = user_message.strip()
-        if re.match(r"^\d{6,}$", bc_raw):
-            prod = db.query(Product).filter(Product.barcode == bc_raw).first()
+        bc_pelado = bool(re.match(r"^\d{6,}$", bc_raw))
+        bc_msg = _barcode_en_mensaje(user_message)
+        # Un verbo de gestion hace del mensaje una ORDEN ("creame el producto X
+        # con codigo 779..."), no una consulta: lo rutea su intent.
+        tiene_accion = bool(set(re.findall(r'\w+', user_message.lower())) & ACCION_VERBOS)
+        if bc_pelado or (bc_msg and not tiene_accion):
+            codigo = bc_raw if bc_pelado else bc_msg
+            prod = db.query(Product).filter(Product.barcode == codigo).first()
             if prod:
-                attrs = db.query(Attribute).join(ProductAttribute).filter(
-                    ProductAttribute.product_id == prod.id
-                ).all()
-                attr_lines = []
-                for a in attrs:
-                    cat_name = db.query(Category.name).filter(Category.id == a.category_id).scalar()
-                    attr_lines.append(f"  - {cat_name}: {a.name}")
-                attr_str = "\n" + "\n".join(attr_lines) if attr_lines else ""
+                return _responder_producto_encontrado(db, prod)
+            if bc_pelado:
+                # Escaneo de un codigo no registrado: arranca la creacion.
+                save_pending_product("default", {"barcode": bc_raw, "nombre": None, "precio": None, "descripcion": None, "atributos_inferidos": []})
                 return AgentResponse(
-                    message=f"**Producto encontrado:**\nNombre: {prod.name}\nPrecio: ${prod.price}\nCodigo: {prod.barcode}{attr_str}",
+                    message=f"No encontre ningun producto con el codigo **{bc_raw}**. ¿Que nombre le queres poner?",
                     action_executed="escanear_barcode",
-                    success=True,
-                    data={"id": prod.id, "name": prod.name, "price": prod.price, "barcode": prod.barcode}
+                    success=False,
+                    data={"barcode": bc_raw, "awaiting_name": True}
                 )
-            save_pending_product("default", {"barcode": bc_raw, "nombre": None, "precio": None, "descripcion": None, "atributos_inferidos": []})
+            # Con palabras alrededor es una pregunta, no un escaneo: no arrancamos
+            # una creacion que el usuario no pidio.
             return AgentResponse(
-                message=f"No encontre ningun producto con el codigo **{bc_raw}**. ¿Que nombre le queres poner?",
+                message=f"No encontre ningun producto con el codigo **{codigo}**.",
                 action_executed="escanear_barcode",
                 success=False,
-                data={"barcode": bc_raw, "awaiting_name": True}
+                data={"barcode": codigo}
             )
 
         # --- Asignacion manual de producto a atributo (deterministico) ---
@@ -1560,6 +1470,23 @@ def agent_chat(chat_msg: ChatMessage, db: Session = Depends(get_db)):
                     action_executed="consulta_general",
                     success=True,
                     data={"stats": db_stats}
+                )
+
+            # Red de seguridad: si a esta altura el mensaje todavia trae un
+            # codigo de barras, NO lo contesta el asesor. Recibe las estadisticas
+            # del negocio en el prompt y ante un numero que no entiende devuelve
+            # la que tenga a mano (el precio promedio): una respuesta plausible y
+            # falsa. La BD sabe la verdad; si no la sabe, preguntamos.
+            bc_tardio = _barcode_en_mensaje(user_message)
+            if bc_tardio:
+                prod = db.query(Product).filter(Product.barcode == bc_tardio).first()
+                if prod:
+                    return _responder_producto_encontrado(db, prod)
+                return AgentResponse(
+                    message=f"No encontre ningun producto con el codigo **{bc_tardio}**. ¿Que queres hacer con ese codigo?",
+                    action_executed="consulta_general",
+                    success=False,
+                    data={"barcode": bc_tardio}
                 )
 
             response = handle_general_query(user_message, db_stats)
