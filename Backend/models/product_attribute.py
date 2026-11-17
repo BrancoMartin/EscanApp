@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, ForeignKey, DateTime, UniqueConstraint
 from sqlalchemy.orm import relationship
 from datetime import datetime
-from Backend.database import Base
+from Backend.models.base import Base
 
 class ProductAttribute(Base):
     __tablename__ = "product_attributes"

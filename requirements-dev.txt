@@ -1,0 +1,11 @@
+# Dependencias SOLO para desarrollo y pruebas.
+#
+#   pip install -r requirements-dev.txt
+#   python -m pytest
+#
+# El usuario final no las necesita: pytest queda excluido del empaquetado
+# (ver la lista `excludes` de pos.spec).
+
+-r requirements.txt
+
+pytest==9.2.0

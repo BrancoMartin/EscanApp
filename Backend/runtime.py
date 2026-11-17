@@ -36,10 +36,10 @@ def is_frozen():
 
 
 def resource_dir():
-    """Raiz de los recursos de solo lectura (Frontend/dist, Modelfiles, pos.db semilla)."""
+    """Raiz de los recursos de solo lectura (Frontend/dist, Modelfiles, migraciones)."""
     if is_frozen():
-        # onefile expone sys._MEIPASS; onedir no lo define y los datos quedan
-        # junto al ejecutable.
+        # PyInstaller 6 en onedir define sys._MEIPASS apuntando a _internal/,
+        # que es donde quedan los datas. El fallback cubre builds viejos.
         bundle = getattr(sys, "_MEIPASS", None)
         if bundle:
             return bundle
@@ -83,8 +83,33 @@ def db_path():
 
 
 def seed_db_path():
-    """Ruta de la base de datos inicial incluida en el producto (puede no existir)."""
-    return os.path.join(resource_dir(), "pos.db")
+    """Ruta de la base de datos inicial incluida en el producto (puede no existir).
+
+    Empaquetada vive en la raiz del bundle (pos.spec la copia ahi). En desarrollo
+    se busca en ``installer/seed/pos.db`` y NO en la raiz del repo: ahi esta el
+    ``pos.db`` de trabajo, con datos reales. Sin esta separacion, cualquier prueba
+    con ``ESCANAPP_DATA_DIR`` copiaria la base de desarrollo dentro de la carpeta
+    descartable.
+    """
+    if is_frozen():
+        return os.path.join(resource_dir(), "pos.db")
+    return os.path.join(_REPO_ROOT, "installer", "seed", "pos.db")
+
+
+def migrations_dir():
+    """Carpeta con el entorno y las revisiones de Alembic.
+
+    Son recursos de SOLO LECTURA: viajan dentro del bundle (pos.spec los copia
+    a Backend/migrations) y en desarrollo viven en el repo.
+    """
+    return os.path.join(resource_dir(), "Backend", "migrations")
+
+
+def backups_dir():
+    """Carpeta escribible con las copias de seguridad de la base del usuario."""
+    path = os.path.join(data_dir(), "backups")
+    os.makedirs(path, exist_ok=True)
+    return path
 
 
 def modelfiles_dir():
@@ -125,6 +150,10 @@ def ensure_seed_database():
     La siembra ocurre por-usuario y en el arranque (no en el instalador) porque
     el instalador corre elevado y una sola vez por maquina: no sabria a que
     perfiles copiarle la base en una PC compartida.
+
+    Sin semilla (el caso normal desde que el esquema lo crean las migraciones),
+    devuelve False y Alembic crea las tablas vacias en el primer arranque. Se
+    conserva para el dia que se envien datos precargados (un catalogo inicial).
     """
     target = db_path()
     if os.path.exists(target):
@@ -132,7 +161,7 @@ def ensure_seed_database():
 
     seed = seed_db_path()
     if not os.path.exists(seed):
-        # Sin semilla: SQLAlchemy creara las tablas vacias en init_db().
+        # Sin semilla: las tablas vacias las crea la migracion base de Alembic.
         return False
 
     # No sembrar sobre si mismo en desarrollo (seed y target son el mismo path).

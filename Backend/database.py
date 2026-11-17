@@ -1,15 +1,25 @@
+"""Acceso a la base SQLite y arranque del esquema.
+
+El esquema NO se crea con ``Base.metadata.create_all()``: lo crean y lo
+evolucionan las migraciones versionadas de Alembic (``Backend/migrations``).
+``init_db()`` es el punto explicito donde se aplican, garantizado antes de que
+cualquier sesion de negocio toque la base.
+
+``Base`` se re-exporta desde aca por compatibilidad: los modelos y el ``env.py``
+de Alembic lo importan directamente de ``Backend.models.base`` para no disparar
+la preparacion de la carpeta de datos ni la creacion del engine.
+"""
+
 from sqlalchemy import create_engine
-from sqlalchemy.orm import DeclarativeBase, sessionmaker
+from sqlalchemy.orm import sessionmaker
 
 from Backend import runtime
-
-
-class Base(DeclarativeBase):
-    pass
+from Backend.models.base import Base  # noqa: F401  (re-export historico)
 
 
 # Prepara la carpeta de datos del usuario ANTES de tocar la base: si es su
-# primer arranque, siembra pos.db y los Modelfiles. Es idempotente.
+# primer arranque, copia los Modelfiles y, si existiera una semilla, la base
+# inicial. Es idempotente.
 runtime.ensure_user_data()
 
 # La base vive en la carpeta de datos del usuario, NO junto al ejecutable.
@@ -27,13 +37,21 @@ engine = create_engine(
 # Fábrica de sesiones
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+
 def init_db():
-    # crea las tablas en la base de datos si no existen
-    from Backend.models import product, sale, item_sale
-    from Backend.models.category import Category
-    from Backend.models.attribute import Attribute
-    from Backend.models.product_attribute import ProductAttribute
-    Base.metadata.create_all(bind=engine)
+    """Aplica las migraciones pendientes y los backups de arranque.
+
+    Delega en el runner, que clasifica la base (nueva, ya versionada, 1.0.x sin
+    registro de version, vacia o desconocida), respalda antes de migrar una base
+    con datos y aplica Alembic hasta la ultima revision.
+
+    Si algo falla, propaga la excepcion: la aplicacion NO debe arrancar con un
+    esquema a medio migrar.
+    """
+    from Backend.migrations_runner import run_startup_migrations
+
+    return run_startup_migrations()
+
 
 def get_db():
     # Generador de sesión para usar como dependencia en FastAPI
