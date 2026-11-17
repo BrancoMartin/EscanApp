@@ -6,7 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles  # para servir archivos estáticos (css, js)
 from fastapi.responses import FileResponse   # para devolver archivos como respuesta
 from Backend import runtime                  # rutas segun el entorno (desarrollo / instalado)
-from Backend.database import init_db     # función que crea las tablas
+from Backend.database import init_db     # aplica las migraciones del esquema
+from Backend.migrations_runner import schema_status  # revisión de esquema para diagnóstico
 from Backend.api.routes import controller_products, controller_sales, controller_agent, controller_attributes_new
 from Backend.agent import provisioning   # verificación y reparación del entorno de IA
 from Backend.agent.ollama_client import warmup  # precarga del modelo de intent
@@ -52,9 +53,12 @@ def create_app() -> FastAPI:  # -> FastAPI indica que esta función devuelve una
     @app.get("/api/system/status")
     def system_status():
         state = provisioning.status()
+        schema = schema_status()
         return {
             "version": runtime.version(),
             "data_dir": runtime.data_dir(),
+            "schema_revision": schema["schema_revision"],
+            "schema_is_head": schema["schema_is_head"],
             "ollama_available": state["ollama_available"],
             "base_model": provisioning.BASE_MODEL,
             "base_model_ready": state["base_model_ready"],

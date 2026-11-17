@@ -146,11 +146,22 @@ Write-Ok "Inno Setup: $Iscc"
 
 Write-Step '2/6  Limpiando builds anteriores'
 
-foreach ($path in @($DistDir, $BuildDir, (Join-Path $FrontendDir 'dist'))) {
+# Con -SkipFrontend se reutiliza el Frontend/dist existente: si lo borraramos aca,
+# el paso 4 fallaria siempre por no encontrar nada que reutilizar.
+$toClean = @($DistDir, $BuildDir)
+if (-not $SkipFrontend) {
+    $toClean += (Join-Path $FrontendDir 'dist')
+}
+
+foreach ($path in $toClean) {
     if (Test-Path $path) {
         Remove-Item -Path $path -Recurse -Force
         Write-Ok "Borrado: $path"
     }
+}
+
+if ($SkipFrontend -and (Test-Path (Join-Path $FrontendDir 'dist'))) {
+    Write-Ok 'Frontend/dist se conserva para reutilizarlo'
 }
 
 if (-not (Test-Path $ReleaseDir)) {
@@ -247,14 +258,16 @@ $internal = Join-Path $DistDir "$AppName\_internal"
 $mustExist = @(
     (Join-Path $internal 'Frontend\dist\index.html'),
     (Join-Path $internal 'Modelfiles\CualifiquerIntent'),
-    (Join-Path $internal 'VERSION')
+    (Join-Path $internal 'VERSION'),
+    # Sin las migraciones la app no puede crear ni actualizar el esquema.
+    (Join-Path $internal 'Backend\migrations\versions\0001_initial_schema.py')
 )
 foreach ($required in $mustExist) {
     if (-not (Test-Path $required)) {
         Fail "Falta un recurso en el bundle: $required" 'Revisa la seccion datas de pos.spec.'
     }
 }
-Write-Ok 'Frontend, Modelfiles y VERSION verificados dentro del bundle'
+Write-Ok 'Frontend, Modelfiles, VERSION y migraciones verificados dentro del bundle'
 
 # ---------------------------------------------------------------------------
 # 6. Instalador

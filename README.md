@@ -59,8 +59,16 @@ descarga lo que falte sola, la primera vez que la abras con conexión.
 
 ### Tus datos
 
-Se guardan en `%LOCALAPPDATA%\EscanApp` (base de datos, logs y Modelfiles).
+Se guardan en `%LOCALAPPDATA%\EscanApp` (base de datos, copias de seguridad, logs y Modelfiles).
 Al desinstalar, EscanApp te pregunta si querés conservarlos.
+
+La base se actualiza sola al abrir la aplicación nueva: antes de tocar nada se guarda una copia
+verificada en `%LOCALAPPDATA%\EscanApp\backups`. Si querés volver atrás, con la aplicación cerrada:
+
+```bash
+python scripts/restore_backup.py --list
+python scripts/restore_backup.py --restore <nombre-de-la-copia>
+```
 
 ---
 
@@ -79,6 +87,26 @@ cd Frontend && npm run dev
 
 Requiere Ollama corriendo con los 9 modelos. Si falta alguno, la app lo crea sola al arrancar
 (ver `Backend/agent/provisioning.py`).
+
+### Esquema de base de datos y pruebas
+
+El esquema lo administra **Alembic**, no `create_all()`. Al arrancar, `Backend/migrations_runner.py`
+clasifica la base del cliente (nueva, ya versionada, 1.0.x sin versión, vacía o desconocida),
+respalda si hay datos y aplica lo que falte. Una base desconocida **no se toca**: la app no arranca
+y explica el motivo.
+
+```bash
+# Suite de pruebas (usa bases temporales, nunca pos.db)
+pip install -r requirements-dev.txt
+python -m pytest
+
+# Crear una migración nueva durante el desarrollo (solo CLI, no se empaqueta)
+cd Backend && alembic revision --autogenerate -m "descripcion corta"
+```
+
+Reglas: no hay cambios de esquema fuera de `Backend/migrations/versions/`, toda migración se prueba
+contra una base 1.0.x con datos y la misma versión debe funcionar en instalación nueva y en
+actualización. El detalle está en `docs/RELEASE.md`.
 
 ## PUBLICAR UNA VERSION
 

@@ -120,11 +120,16 @@ def data_entries():
     # VERSION: runtime.version() la lee y la reporta en /api/system/status.
     entries.append((os.path.join(SPEC_DIR, "VERSION"), "."))
 
-    # Base de datos inicial (opcional). Si esta, la app la siembra en la carpeta
-    # del usuario en su primer arranque; si no, crea el esquema vacio.
-    seed_db = os.path.join(SPEC_DIR, "installer", "seed", "pos.db")
-    if os.path.isfile(seed_db):
-        entries.append((seed_db, "."))
+    # Migraciones de Alembic: el runner las localiza por RUTA, no por import.
+    # Sin esta carpeta el .exe arranca y falla con "Path doesn't exist", un
+    # error que en desarrollo nunca aparece. Por eso el build se detiene.
+    migrations = os.path.join(SPEC_DIR, "Backend", "migrations")
+    if not os.path.isdir(os.path.join(migrations, "versions")):
+        raise SystemExit(
+            "Falta Backend/migrations (o su carpeta versions): sin las migraciones "
+            "no se puede crear ni actualizar la base de datos de los clientes."
+        )
+    entries.append((migrations, "Backend/migrations"))
 
     return entries
 
@@ -153,6 +158,16 @@ hidden = [
 # resuelve varias piezas dinamicamente: las recogemos explicitamente.
 hidden += collect_submodules("Backend")
 hidden += collect_submodules("langchain_ollama")
+
+# Alembic carga el dialecto SQLite y Mako (su motor de plantillas) por nombre en
+# runtime: PyInstaller no los ve siguiendo imports. Se descarta ``alembic.testing``:
+# es para correr la suite de Alembic, arrastra pytest (excluido) y no se usa aca.
+hidden += collect_submodules(
+    "alembic",
+    filter=lambda name: not name.startswith("alembic.testing"),
+    on_error="ignore",
+)
+hidden += collect_submodules("mako")
 
 a = Analysis(
     ["main.py"],

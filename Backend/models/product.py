@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime
 from sqlalchemy.orm import relationship
 from datetime import datetime
-from Backend.database import Base
+from Backend.models.base import Base
 
 
 class Product(Base):
