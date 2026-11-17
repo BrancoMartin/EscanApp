@@ -160,8 +160,13 @@ hidden += collect_submodules("Backend")
 hidden += collect_submodules("langchain_ollama")
 
 # Alembic carga el dialecto SQLite y Mako (su motor de plantillas) por nombre en
-# runtime: PyInstaller no los ve siguiendo imports.
-hidden += collect_submodules("alembic")
+# runtime: PyInstaller no los ve siguiendo imports. Se descarta ``alembic.testing``:
+# es para correr la suite de Alembic, arrastra pytest (excluido) y no se usa aca.
+hidden += collect_submodules(
+    "alembic",
+    filter=lambda name: not name.startswith("alembic.testing"),
+    on_error="ignore",
+)
 hidden += collect_submodules("mako")
 
 a = Analysis(

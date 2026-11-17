@@ -56,7 +56,7 @@
 - [x] 5.2 `Backend/runtime.py`: agregar `backups_dir()` resolviendo contra `data_dir()`
 - [x] 5.3 `pos.spec`: agregar `Backend/migrations` a `data_entries()` con `raise SystemExit` si falta (igual que `Frontend/dist` y `Modelfiles`)
 - [x] 5.4 `pos.spec`: agregar `collect_submodules("alembic")` y `"mako"` a `hidden`
-- [ ] 5.5 Verificar que las rutas resuelven bien en onedir de PyInstaller 6.x (los datos quedan en `_internal/`, y `sys._MEIPASS` **sí** está definido; el comentario de `runtime.resource_dir()` dice lo contrario y quedó desactualizado)
+- [x] 5.5 Verificar que las rutas resuelven bien en onedir de PyInstaller 6.x (los datos quedan en `_internal/`, y `sys._MEIPASS` **sí** está definido; el comentario de `runtime.resource_dir()` dice lo contrario y quedó desactualizado)
 
 ## 6. Retiro de la semilla (Decisión 4)
 
