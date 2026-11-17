@@ -78,6 +78,52 @@ El `AppId` del instalador (`installer/EscanApp.iss`) es un GUID fijo que **nunca
 
 Si cambiás el `AppId`, rompés todo eso. No lo toques.
 
+### Migraciones de esquema (obligatorio desde 1.0.2)
+
+El esquema de la base **no** se crea con `create_all()`: lo administra Alembic. Al arrancar,
+`Backend/migrations_runner.py`:
+
+1. clasifica la base —nueva, ya versionada, 1.0.x (tiene las 6 tablas pero no `alembic_version`),
+   vacía o **desconocida**—;
+2. si hay datos y hace falta cambiar el esquema, crea una copia verificada en `backups/`;
+3. sella la base 1.0.x en la revisión base, aplica las migraciones pendientes y verifica que quedó
+   en la última revisión.
+
+Una base **desconocida** (archivo que no es SQLite, o tablas que no son las de EscanApp) **no se
+modifica**: la aplicación no arranca, muestra el motivo real y el log indica la ruta del archivo.
+No se adivina nunca.
+
+Cómo escribir una migración:
+
+```bash
+cd Backend
+alembic revision --autogenerate -m "descripcion corta"
+# revisar el archivo generado en Backend/migrations/versions/ ANTES de commitear
+alembic upgrade head
+```
+
+Reglas:
+
+- Todo cambio de esquema va en una migración versionada. `create_all()` ya no se usa.
+- Revisar a mano lo autogenerado: puede proponer renombres que en SQLite requieren
+  `render_as_batch` y no son lo que querés. La restricción sin nombre de `product_attributes` está
+  filtrada a propósito en `Backend/db_autogen.py` (deuda documentada).
+- La migración debe funcionar en una **instalación nueva** y en una **actualización** desde 1.0.x
+  con datos.
+- Probar con `ESCANAPP_DATA_DIR` apuntando a un directorio temporal, nunca contra `pos.db` real:
+
+```bash
+set ESCANAPP_DATA_DIR=%TEMP%\escanapp-prueba
+python -m pytest
+```
+
+- **Ninguna versión se publica sin correr la prueba de actualización end-to-end** (8.8 en
+  `Backend/openspec/changes/database-migrations/tasks.md`): instalar 1.0.1, cargar productos y una
+  venta, instalar la versión nueva encima y verificar que los datos siguen ahí y que
+  `/api/system/status` reporta la revisión nueva.
+- Si una migración falla, la app no arranca a medias: informa el error, conserva la copia previa y
+  los datos quedan intactos. No reintentar a mano sobre la base del cliente sin esa copia.
+
 ---
 
 ## Qué pasa en la PC del cliente
@@ -120,10 +166,11 @@ El build lo detecta y avisa **`Modo OFFLINE`**. El instalador queda ~1 GB en vez
 
 ```
 %LOCALAPPDATA%\EscanApp\
-├── pos.db              ← base de datos (productos, ventas)
+├── pos.db              ← base de datos (productos, ventas) + versión de esquema
+├── backups\            ← copias automáticas y previas a migrar/restaurar (últimas 5)
 ├── Modelfiles\         ← copia editable de los 9 Modelfiles
 └── logs\
-    ├── escanapp.log    ← log de la aplicación
+    ├── escanapp.log    ← log de la aplicación (incluye la revisión de esquema)
     └── install.log     ← log del aprovisionamiento de IA
 ```
 
@@ -140,6 +187,9 @@ La app expone su estado en `http://127.0.0.1:8000/api/system/status`:
 ```json
 {
   "version": "1.0.0",
+  "data_dir": "C:\\Users\\cliente\\AppData\\Local\\EscanApp",
+  "schema_revision": "0001",
+  "schema_is_head": true,
   "ollama_available": true,
   "base_model": "qwen2.5:0.5b",
   "base_model_ready": true,
@@ -150,6 +200,7 @@ La app expone su estado en `http://127.0.0.1:8000/api/system/status`:
 }
 ```
 
+- `schema_revision` / `schema_is_head` → en qué migración está la base del cliente.
 - `ollama_available: false` → Ollama no está corriendo.
 - `missing_models` no vacío → se están creando (o falló la creación; mirá `last_error`).
 - `POST /api/system/provision` fuerza un reintento.
