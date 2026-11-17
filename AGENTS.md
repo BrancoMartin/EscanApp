@@ -99,7 +99,7 @@ La base de datos puede contener información real de comercios. Tratarla siempre
 
 ### Estado actual del esquema
 
-El esquema lo administra **Alembic** (implementado en el change `database-migrations`). `Base.metadata.create_all()` ya no se usa en runtime: `Backend/database.py:init_db()` delega en `Backend/migrations_runner.py`, que al arrancar clasifica la base y aplica las migraciones pendientes.
+El esquema lo administra **Alembic** (change `database-migrations`, archivado en `Backend/openspec/changes/archive/2026-11-17-database-migrations/`; la spec vigente es `Backend/openspec/specs/persistence/spec.md`). `Base.metadata.create_all()` ya no se usa en runtime: `Backend/database.py:init_db()` delega en `Backend/migrations_runner.py`, que al arrancar clasifica la base y aplica las migraciones pendientes.
 
 - Modelos: `Backend/models/`, con `Base` en `Backend/models/base.py` (nunca importar `Base` desde `Backend/database` en código nuevo).
 - Revisiones: `Backend/migrations/versions/`; la revisión base `0001` reproduce el DDL exacto de 1.0.1 con SQL crudo, porque `op.create_table` aplicaría la `naming_convention` nueva.

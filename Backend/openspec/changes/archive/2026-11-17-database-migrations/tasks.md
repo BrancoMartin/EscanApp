@@ -81,13 +81,17 @@
 - [x] 8.5 Equivalencia: el DDL de una instalación nueva es idéntico al de una migrada
 - [x] 8.6 Sin deriva: `alembic revision --autogenerate` sobre una base en head produce una revisión **vacía**
 - [ ] 8.7 Empaquetado: `build_release.bat` → instalar el `.exe` en una VM limpia → arranca, crea la base, registra una venta
+  - Verificado sin VM: el `.exe` empaquetado arranca con `ESCANAPP_DATA_DIR` aislado, crea la base (caso A, `0001_initial_schema`, firma idéntica a 1.0.1), registra un producto y una venta por el flujo real (`GET /api/products/barcode/{code}` → `POST /api/sales/{id}/close`).
+  - Falta: instalar el setup con `/SILENT` en una **VM Windows limpia** (con `PrivilegesRequired=admin` no se corre sobre la PC de desarrollo) y verificar que la app arranca desde `{app}`.
 - [ ] 8.8 **Actualización end-to-end**: instalar 1.0.1, cargar productos y una venta, instalar la versión nueva encima → los datos siguen ahí y `/api/system/status` reporta la revisión nueva
+  - Verificado a nivel de datos con la app real: código de `main` (1.0.1, sin Alembic) crea una base legacy con 1 producto y 1 venta cerrada; el `.exe` nuevo sobre el mismo directorio de datos aplica el caso C, deja `backups/pos-backup-legacy-*.db`, reporta `0001_initial_schema` y la venta sigue visible por API.
+  - Falta: la copia de archivos del instalador en sí (instalar la versión nueva encima en una VM).
 - [x] 8.9 Usar `ESCANAPP_DATA_DIR` para armar los escenarios 8.1–8.6 contra bases descartables
 
 ## 9. Documentación y gobernanza
 
 - [x] 9.1 `docs/RELEASE.md`: agregar la sección "cómo escribir una migración" y la regla de que **ninguna versión se publica sin correr la prueba 8.8**
 - [x] 9.2 `README.md`: mencionar el versionado del esquema en la sección de desarrollo
-- [ ] 9.3 Actualizar `wiki/backend/SQLAlchemy.md` de la bóveda: mover Alembic de "Gaps identificados" a "Lo que sé hacer" y sumar este proyecto a "Proyectos donde lo usé"
-- [ ] 9.4 `openspec/config.yaml`: registrar la capacidad `persistence` en la sección `specs` (queda para cuando se archive el change: hoy `specs/persistence/spec.md` todavía vive dentro de `changes/`)
+- [x] 9.3 Actualizar `wiki/backend/SQLAlchemy.md` de la bóveda: mover Alembic de "Gaps identificados" a "Lo que sé hacer" y sumar este proyecto a "Proyectos donde lo usé"
+- [x] 9.4 `openspec/config.yaml`: registrar la capacidad `persistence` en la sección `specs` (queda para cuando se archive el change: hoy `specs/persistence/spec.md` todavía vive dentro de `changes/`)
 - [x] 9.5 `openspec validate database-migrations`

@@ -118,7 +118,7 @@ python -m pytest
 ```
 
 - **Ninguna versión se publica sin correr la prueba de actualización end-to-end** (8.8 en
-  `Backend/openspec/changes/database-migrations/tasks.md`): instalar 1.0.1, cargar productos y una
+  `Backend/openspec/changes/archive/2026-11-17-database-migrations/tasks.md`): instalar 1.0.1, cargar productos y una
   venta, instalar la versión nueva encima y verificar que los datos siguen ahí y que
   `/api/system/status` reporta la revisión nueva.
 - Si una migración falla, la app no arranca a medias: informa el error, conserva la copia previa y
