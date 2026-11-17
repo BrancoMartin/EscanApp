@@ -26,6 +26,11 @@ DEFAULT_PORT = 8000
 # produccion usa URLs relativas, asi que no le importa en que puerto quedamos.
 PORT = DEFAULT_PORT
 
+# Si create_app() falla (por ejemplo, una migracion de base de datos que no se
+# pudo aplicar), guardamos el error para mostrarlo con su mensaje especifico en
+# vez del generico "el servidor no arranco".
+STARTUP_ERROR = None
+
 
 def setup_logging():
     """Con console=False, PyInstaller deja sys.stdout en None y cualquier print()
@@ -60,10 +65,31 @@ def find_free_port(preferred):
 
 
 def start_server():
+    global STARTUP_ERROR
+
     import uvicorn
     from Backend.api.app import create_app
 
-    app = create_app()
+    try:
+        app = create_app()
+    except Exception as error:
+        # La base no se pudo preparar (migracion fallida, base desconocida, lock
+        # tomado). create_app ya no arranca a medias: se informa el motivo real.
+        STARTUP_ERROR = error
+        print(f"[FATAL] No se pudo preparar la aplicacion: {error}")
+        traceback.print_exc()
+        return
+
+    # Queda en el log de cada arranque: permite diagnosticar un cliente sin
+    # adivinar en que revision de esquema esta su base.
+    from Backend.migrations_runner import schema_status
+
+    estado = schema_status()
+    print(
+        f"Esquema de base de datos: {estado['schema_revision']} "
+        f"(en la ultima revision: {estado['schema_is_head']})"
+    )
+
     uvicorn.run(app, host=HOST, port=PORT, log_level="info")
 
 
@@ -109,7 +135,10 @@ def main():
     thread.start()
 
     if not wait_server():
-        fatal("El servidor interno no arrancó. La aplicación no puede continuar.")
+        if STARTUP_ERROR is not None:
+            fatal(f"No se pudo iniciar EscanApp: {STARTUP_ERROR}")
+        else:
+            fatal("El servidor interno no arrancó. La aplicación no puede continuar.")
         return 1
 
     if "--no-window" in sys.argv:
